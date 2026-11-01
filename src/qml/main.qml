@@ -1,0 +1,559 @@
+/*
+    SPDX-FileCopyrightText: 2026 Cesar
+    SPDX-License-Identifier: GPL-3.0-or-later
+*/
+
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import QtQuick.Controls as QQC2
+import QtQuick.Layouts
+import org.kde.kirigami as Kirigami
+
+Kirigami.ApplicationWindow {
+    id: root
+
+    title: "KScreenTime — Tiempo de Uso"
+    width: 980
+    height: 760
+    minimumWidth: 820
+    minimumHeight: 620
+    color: "#090b10"
+
+    readonly property var trackerObj: typeof Tracker !== "undefined" ? Tracker : null
+
+    function categoryAccentColor(cat: string): color {
+        if (cat === "Desarrollo") return "#00e5ff";
+        if (cat === "Navegación") return "#4fc3f7";
+        if (cat === "Multimedia") return "#ba68c8";
+        if (cat === "Comunicación") return "#66bb6a";
+        return "#ffb74d";
+    }
+
+    pageStack.initialPage: Kirigami.ScrollablePage {
+        id: dashboardPage
+        title: "Tiempo de Uso"
+        padding: Kirigami.Units.largeSpacing
+
+        background: Rectangle {
+            color: "#090b10"
+        }
+
+        ColumnLayout {
+            width: dashboardPage.availableWidth
+            spacing: Kirigami.Units.largeSpacing
+
+            // Top summary row: 3 Liquid Glass cards
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Kirigami.Units.largeSpacing
+
+                // Card 1: Today's Total Screen Time & Comparison vs 7-day average
+                LiquidGlassCard {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 1
+                    Layout.minimumHeight: 138
+                    glassStyle: "shell"
+                    isHighlighted: true
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: Kirigami.Units.largeSpacing
+                        spacing: Kirigami.Units.smallSpacing
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Kirigami.Units.smallSpacing
+
+                            Kirigami.Icon {
+                                source: "preferences-system-time"
+                                Layout.preferredWidth: 22
+                                Layout.preferredHeight: 22
+                            }
+
+                            QQC2.Label {
+                                text: "Tiempo de Uso (" + (root.trackerObj ? root.trackerObj.selectedDate : "Hoy") + ")"
+                                color: "#b0bec5"
+                                font.pixelSize: 13
+                                font.bold: true
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                            }
+                        }
+
+                        QQC2.Label {
+                            text: root.trackerObj ? root.trackerObj.todayTotalFormatted : "0m"
+                            color: "#ffffff"
+                            font.pixelSize: 34
+                            font.bold: true
+                        }
+
+                        QQC2.Label {
+                            text: root.trackerObj ? root.trackerObj.vsAverageText : ""
+                            color: "#00e5ff"
+                            font.pixelSize: 12
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+                    }
+                }
+
+                // Card 2: Live Active Wayland Window Indicator
+                LiquidGlassCard {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 1
+                    Layout.minimumHeight: 138
+                    glassStyle: "shell"
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: Kirigami.Units.largeSpacing
+                        spacing: Kirigami.Units.smallSpacing
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Kirigami.Units.smallSpacing
+
+                            Rectangle {
+                                width: 10
+                                height: 10
+                                radius: 5
+                                color: "#00e676"
+                            }
+
+                            QQC2.Label {
+                                text: "Ventana Activa (Wayland / KWin)"
+                                color: "#b0bec5"
+                                font.pixelSize: 13
+                                font.bold: true
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                            }
+                        }
+
+                        QQC2.Label {
+                            text: root.trackerObj ? root.trackerObj.currentActiveDisplayName : "Escritorio Wayland"
+                            color: "#ffffff"
+                            font.pixelSize: 22
+                            font.bold: true
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+
+                        QQC2.Label {
+                            text: {
+                                if (!root.trackerObj) return "";
+                                const cap = root.trackerObj.currentActiveCaption;
+                                const app = root.trackerObj.currentActiveApp;
+                                return cap.length > 0 ? (app + " — " + cap) : app;
+                            }
+                            color: "#90a4ae"
+                            font.pixelSize: 12
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+                    }
+                }
+
+                // Card 3: Category Breakdown Badges
+                LiquidGlassCard {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 1.25
+                    Layout.minimumHeight: 138
+                    glassStyle: "shell"
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: Kirigami.Units.largeSpacing
+                        spacing: Kirigami.Units.smallSpacing
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Kirigami.Units.smallSpacing
+
+                            Kirigami.Icon {
+                                source: "view-statistics"
+                                Layout.preferredWidth: 20
+                                Layout.preferredHeight: 20
+                            }
+
+                            QQC2.Label {
+                                text: "Desglose por Categorías"
+                                color: "#b0bec5"
+                                font.pixelSize: 13
+                                font.bold: true
+                                Layout.fillWidth: true
+                            }
+                        }
+
+                        Flow {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            spacing: Kirigami.Units.smallSpacing
+
+                            Repeater {
+                                model: root.trackerObj ? root.trackerObj.categoryBreakdown : []
+
+                                delegate: LiquidGlassCard {
+                                    id: catBadge
+                                    required property var modelData
+
+                                    width: catBadgeRow.implicitWidth + Kirigami.Units.largeSpacing * 1.4
+                                    height: 30
+                                    glassStyle: "recessed"
+                                    border.color: root.categoryAccentColor(catBadge.modelData.category)
+
+                                    RowLayout {
+                                        id: catBadgeRow
+                                        anchors.centerIn: parent
+                                        spacing: 6
+
+                                        Kirigami.Icon {
+                                            source: catBadge.modelData.iconName
+                                            Layout.preferredWidth: 15
+                                            Layout.preferredHeight: 15
+                                        }
+
+                                        QQC2.Label {
+                                            text: catBadge.modelData.category
+                                            color: "#eceff1"
+                                            font.pixelSize: 12
+                                            font.bold: true
+                                        }
+
+                                        QQC2.Label {
+                                            text: catBadge.modelData.formattedDuration
+                                            color: "#00e5ff"
+                                            font.pixelSize: 12
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Middle card: Interactive 7-Day Bar Chart
+            LiquidGlassCard {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 230
+                glassStyle: "shell"
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: Kirigami.Units.largeSpacing
+                    spacing: Kirigami.Units.mediumSpacing
+
+                    RowLayout {
+                        Layout.fillWidth: true
+
+                        Kirigami.Icon {
+                            source: "clock"
+                            Layout.preferredWidth: 20
+                            Layout.preferredHeight: 20
+                        }
+
+                        QQC2.Label {
+                            text: "Actividad de los Últimos 7 Días (haz clic en un día para inspeccionar)"
+                            color: "#eceff1"
+                            font.pixelSize: 15
+                            font.bold: true
+                            Layout.fillWidth: true
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        spacing: Kirigami.Units.largeSpacing
+
+                        Repeater {
+                            model: root.trackerObj ? root.trackerObj.weeklyChartData : []
+
+                            delegate: Item {
+                                id: dayBarItem
+                                required property var modelData
+
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+
+                                ColumnLayout {
+                                    anchors.fill: parent
+                                    spacing: 6
+
+                                    QQC2.Label {
+                                        Layout.alignment: Qt.AlignHCenter
+                                        text: dayBarItem.modelData.formattedDuration
+                                        color: dayBarItem.modelData.isSelected ? "#00e5ff" : "#90a4ae"
+                                        font.pixelSize: 11
+                                        font.bold: dayBarItem.modelData.isSelected
+                                    }
+
+                                    Item {
+                                        Layout.fillWidth: true
+                                        Layout.fillHeight: true
+
+                                        LiquidGlassCard {
+                                            anchors.fill: parent
+                                            anchors.leftMargin: 8
+                                            anchors.rightMargin: 8
+                                            glassStyle: "recessed"
+                                            isHighlighted: dayBarItem.modelData.isSelected
+
+                                            Rectangle {
+                                                anchors.left: parent.left
+                                                anchors.right: parent.right
+                                                anchors.bottom: parent.bottom
+                                                anchors.margins: 3
+                                                height: Math.max(6, (parent.height - 6) * dayBarItem.modelData.ratio)
+                                                radius: 6
+                                                color: dayBarItem.modelData.isSelected ? "#00e5ff" : "#26c6da"
+                                                opacity: dayBarItem.modelData.isSelected ? 0.92 : 0.58
+
+                                                Behavior on height {
+                                                    NumberAnimation {
+                                                        duration: 220
+                                                        easing.type: Easing.OutCubic
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                if (root.trackerObj) {
+                                                    root.trackerObj.selectDate(dayBarItem.modelData.date);
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    QQC2.Label {
+                                        Layout.alignment: Qt.AlignHCenter
+                                        text: dayBarItem.modelData.dayLabel
+                                        color: dayBarItem.modelData.isSelected ? "#ffffff" : "#b0bec5"
+                                        font.pixelSize: 12
+                                        font.bold: dayBarItem.modelData.isSelected
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Bottom card: Per-Application Usage List & App Limits
+            LiquidGlassCard {
+                Layout.fillWidth: true
+                Layout.minimumHeight: 310
+                implicitHeight: appListColumn.implicitHeight + Kirigami.Units.largeSpacing * 2
+                glassStyle: "shell"
+
+                ColumnLayout {
+                    id: appListColumn
+                    anchors.fill: parent
+                    anchors.margins: Kirigami.Units.largeSpacing
+                    spacing: Kirigami.Units.mediumSpacing
+
+                    RowLayout {
+                        Layout.fillWidth: true
+
+                        Kirigami.Icon {
+                            source: "application-x-executable"
+                            Layout.preferredWidth: 20
+                            Layout.preferredHeight: 20
+                        }
+
+                        QQC2.Label {
+                            text: "Uso por Aplicación y Límites Diarios"
+                            color: "#eceff1"
+                            font.pixelSize: 15
+                            font.bold: true
+                            Layout.fillWidth: true
+                        }
+                    }
+
+                    Repeater {
+                        model: root.trackerObj ? root.trackerObj.appUsageList : []
+
+                        delegate: LiquidGlassCard {
+                            id: appCard
+                            required property var modelData
+
+                            Layout.fillWidth: true
+                            Layout.minimumHeight: 68
+                            glassStyle: "card"
+                            isHighlighted: appCard.modelData.limitExceeded
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.margins: Kirigami.Units.mediumSpacing
+                                spacing: Kirigami.Units.mediumSpacing
+
+                                Kirigami.Icon {
+                                    source: appCard.modelData.iconName
+                                    Layout.preferredWidth: 32
+                                    Layout.preferredHeight: 32
+                                }
+
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 4
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: Kirigami.Units.smallSpacing
+
+                                        QQC2.Label {
+                                            text: appCard.modelData.displayName
+                                            color: "#ffffff"
+                                            font.pixelSize: 14
+                                            font.bold: true
+                                        }
+
+                                        Rectangle {
+                                            radius: 4
+                                            color: Qt.rgba(0.0, 0.9, 1.0, 0.14)
+                                            border.width: 1
+                                            border.color: root.categoryAccentColor(appCard.modelData.category)
+                                            implicitWidth: catText.implicitWidth + 12
+                                            implicitHeight: 20
+
+                                            QQC2.Label {
+                                                id: catText
+                                                anchors.centerIn: parent
+                                                text: appCard.modelData.category
+                                                color: "#e0f7fa"
+                                                font.pixelSize: 11
+                                            }
+                                        }
+
+                                        Rectangle {
+                                            visible: appCard.modelData.limitExceeded
+                                            radius: 4
+                                            color: Qt.rgba(1.0, 0.25, 0.25, 0.24)
+                                            border.width: 1
+                                            border.color: "#ff5252"
+                                            implicitWidth: limitAlertRow.implicitWidth + 12
+                                            implicitHeight: 20
+
+                                            RowLayout {
+                                                id: limitAlertRow
+                                                anchors.centerIn: parent
+                                                spacing: 4
+
+                                                Kirigami.Icon {
+                                                    source: "dialog-warning"
+                                                    Layout.preferredWidth: 14
+                                                    Layout.preferredHeight: 14
+                                                }
+
+                                                QQC2.Label {
+                                                    text: "Límite superado (" + appCard.modelData.limitMinutes + "m)"
+                                                    color: "#ff8a80"
+                                                    font.pixelSize: 11
+                                                    font.bold: true
+                                                }
+                                            }
+                                        }
+
+                                        Item {
+                                            Layout.fillWidth: true
+                                        }
+
+                                        QQC2.Label {
+                                            text: appCard.modelData.formattedDuration
+                                                + " (" + Math.round(appCard.modelData.ratio * 100) + "%)"
+                                            color: "#00e5ff"
+                                            font.pixelSize: 13
+                                            font.bold: true
+                                        }
+                                    }
+
+                                    // Usage progress bar
+                                    Rectangle {
+                                        Layout.fillWidth: true
+                                        height: 8
+                                        radius: 4
+                                        color: Qt.rgba(1.0, 1.0, 1.0, 0.10)
+
+                                        Rectangle {
+                                            width: Math.max(6, parent.width * Math.min(1.0, appCard.modelData.ratio))
+                                            height: parent.height
+                                            radius: 4
+                                            color: appCard.modelData.limitExceeded
+                                                ? "#ff5252"
+                                                : root.categoryAccentColor(appCard.modelData.category)
+                                        }
+                                    }
+                                }
+
+                                // Daily App Limit selector buttons (15m, 30m, 60m, Sin límite)
+                                RowLayout {
+                                    spacing: 4
+
+                                    QQC2.Label {
+                                        text: "Límite:"
+                                        color: "#90a4ae"
+                                        font.pixelSize: 11
+                                    }
+
+                                    QQC2.Button {
+                                        text: "15m"
+                                        flat: appCard.modelData.limitMinutes !== 15
+                                        highlighted: appCard.modelData.limitMinutes === 15
+                                        Layout.preferredHeight: 28
+                                        onClicked: {
+                                            if (root.trackerObj) {
+                                                root.trackerObj.setAppLimit(appCard.modelData.appId, 15);
+                                            }
+                                        }
+                                    }
+
+                                    QQC2.Button {
+                                        text: "30m"
+                                        flat: appCard.modelData.limitMinutes !== 30
+                                        highlighted: appCard.modelData.limitMinutes === 30
+                                        Layout.preferredHeight: 28
+                                        onClicked: {
+                                            if (root.trackerObj) {
+                                                root.trackerObj.setAppLimit(appCard.modelData.appId, 30);
+                                            }
+                                        }
+                                    }
+
+                                    QQC2.Button {
+                                        text: "60m"
+                                        flat: appCard.modelData.limitMinutes !== 60
+                                        highlighted: appCard.modelData.limitMinutes === 60
+                                        Layout.preferredHeight: 28
+                                        onClicked: {
+                                            if (root.trackerObj) {
+                                                root.trackerObj.setAppLimit(appCard.modelData.appId, 60);
+                                            }
+                                        }
+                                    }
+
+                                    QQC2.Button {
+                                        text: "Sin límite"
+                                        flat: appCard.modelData.limitMinutes !== 0
+                                        highlighted: appCard.modelData.limitMinutes === 0
+                                        Layout.preferredHeight: 28
+                                        onClicked: {
+                                            if (root.trackerObj) {
+                                                root.trackerObj.setAppLimit(appCard.modelData.appId, 0);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
