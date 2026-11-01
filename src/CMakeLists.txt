@@ -31,3 +31,4 @@ target_link_libraries(kscreentime PRIVATE
 
 install(TARGETS kscreentime DESTINATION ${KDE_INSTALL_BINDIR})
 install(FILES org.cesar.kscreentime.desktop DESTINATION ${KDE_INSTALL_APPDIR})
+install(FILES kscreentime.service DESTINATION ${KDE_INSTALL_DATADIR}/systemd/user)

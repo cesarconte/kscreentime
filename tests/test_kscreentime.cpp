@@ -177,12 +177,24 @@ private Q_SLOTS:
         QVERIFY(tempDir.isValid());
 
         ScreenTimeTracker tracker(tempDir.path());
+        QCOMPARE(tracker.todayTotalSeconds(), 0);
+        QVERIFY(tracker.appUsageList().isEmpty());
+
         tracker.recordActiveApp(QStringLiteral("org.kde.konsole.desktop"), QStringLiteral("zsh"));
         QCOMPARE(tracker.currentActiveApp(), QStringLiteral("org.kde.konsole"));
         QCOMPARE(tracker.currentActiveCaption(), QStringLiteral("zsh"));
 
         tracker.tickActiveApp();
         QCOMPARE(tracker.todayTotalSeconds(), 1);
+
+        // Clearing active app (e.g. desktop focused) stops ticking
+        tracker.recordActiveApp(QString(), QString());
+        tracker.tickActiveApp();
+        QCOMPARE(tracker.todayTotalSeconds(), 1);
+
+        tracker.clearAllData();
+        QCOMPARE(tracker.todayTotalSeconds(), 0);
+        QVERIFY(tracker.appUsageList().isEmpty());
     }
 
     void testQmlCompilation()

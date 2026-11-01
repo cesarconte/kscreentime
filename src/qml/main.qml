@@ -18,9 +18,26 @@ Kirigami.ApplicationWindow {
     height: 760
     minimumWidth: 820
     minimumHeight: 620
+    visible: root.trackerObj ? root.trackerObj.windowVisible : true
     color: "#090b10"
 
     readonly property var trackerObj: typeof Tracker !== "undefined" ? Tracker : null
+
+    onClosing: (close) => {
+        if (root.trackerObj) {
+            close.accepted = false;
+            root.trackerObj.windowVisible = false;
+        }
+    }
+
+    Connections {
+        target: root.trackerObj
+        function onShowWindowRequested() {
+            root.show();
+            root.raise();
+            root.requestActivate();
+        }
+    }
 
     function categoryAccentColor(cat: string): color {
         if (cat === "Desarrollo") return "#00e5ff";
@@ -118,7 +135,7 @@ Kirigami.ApplicationWindow {
                                 width: 10
                                 height: 10
                                 radius: 5
-                                color: "#00e676"
+                                color: (root.trackerObj && root.trackerObj.currentActiveApp.length > 0) ? "#00e676" : "#78909c"
                             }
 
                             QQC2.Label {
@@ -145,6 +162,7 @@ Kirigami.ApplicationWindow {
                                 if (!root.trackerObj) return "";
                                 const cap = root.trackerObj.currentActiveCaption;
                                 const app = root.trackerObj.currentActiveApp;
+                                if (app.length === 0) return "Esperando foco de ventana en KWin...";
                                 return cap.length > 0 ? (app + " — " + cap) : app;
                             }
                             color: "#90a4ae"
@@ -186,7 +204,18 @@ Kirigami.ApplicationWindow {
                             }
                         }
 
+                        QQC2.Label {
+                            visible: !root.trackerObj || root.trackerObj.categoryBreakdown.length === 0
+                            text: "Sin actividad registrada en esta fecha"
+                            color: "#78909c"
+                            font.pixelSize: 12
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
                         Flow {
+                            visible: root.trackerObj && root.trackerObj.categoryBreakdown.length > 0
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                             spacing: Kirigami.Units.smallSpacing
@@ -306,7 +335,9 @@ Kirigami.ApplicationWindow {
                                                 anchors.right: parent.right
                                                 anchors.bottom: parent.bottom
                                                 anchors.margins: 3
-                                                height: Math.max(6, (parent.height - 6) * dayBarItem.modelData.ratio)
+                                                height: dayBarItem.modelData.totalSeconds > 0
+                                                    ? Math.max(6, (parent.height - 6) * dayBarItem.modelData.ratio)
+                                                    : 0
                                                 radius: 6
                                                 color: dayBarItem.modelData.isSelected ? "#00e5ff" : "#26c6da"
                                                 opacity: dayBarItem.modelData.isSelected ? 0.92 : 0.58
@@ -348,7 +379,7 @@ Kirigami.ApplicationWindow {
             // Bottom card: Per-Application Usage List & App Limits
             LiquidGlassCard {
                 Layout.fillWidth: true
-                Layout.minimumHeight: 310
+                Layout.minimumHeight: 220
                 implicitHeight: appListColumn.implicitHeight + Kirigami.Units.largeSpacing * 2
                 glassStyle: "shell"
 
@@ -368,11 +399,38 @@ Kirigami.ApplicationWindow {
                         }
 
                         QQC2.Label {
-                            text: "Uso por Aplicación y Límites Diarios"
+                            text: "Uso Real por Aplicación y Límites Diarios"
                             color: "#eceff1"
                             font.pixelSize: 15
                             font.bold: true
                             Layout.fillWidth: true
+                        }
+
+                        QQC2.Button {
+                            icon.name: "edit-clear-history"
+                            text: "Reiniciar historial"
+                            flat: true
+                            enabled: root.trackerObj && root.trackerObj.todayTotalSeconds > 0
+                            onClicked: {
+                                if (root.trackerObj) {
+                                    root.trackerObj.clearAllData();
+                                }
+                            }
+                        }
+                    }
+
+                    LiquidGlassCard {
+                        visible: !root.trackerObj || root.trackerObj.appUsageList.length === 0
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 96
+                        glassStyle: "recessed"
+
+                        QQC2.Label {
+                            anchors.centerIn: parent
+                            text: "No hay actividad de aplicaciones registrada en esta fecha.\nEl monitor de KWin Wayland contabiliza en tiempo real las ventanas activas que utilizas."
+                            horizontalAlignment: Text.AlignHCenter
+                            color: "#90a4ae"
+                            font.pixelSize: 13
                         }
                     }
 

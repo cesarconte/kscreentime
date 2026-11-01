@@ -11,8 +11,12 @@
 #include <QDBusReply>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
+#include <QHash>
+#include <QIcon>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QSettings>
 #include <QStandardPaths>
 #include <QVariantMap>
 
@@ -21,7 +25,111 @@
 
 namespace {
 const QString kKWinPluginName = QStringLiteral("kscreentime_tracker");
+
+struct DesktopEntryMeta {
+    QString displayName;
+    QString iconName;
+    QString categoriesRaw;
+};
+
+const QHash<QString, DesktopEntryMeta> &installedDesktopEntries()
+{
+    static QHash<QString, DesktopEntryMeta> cache;
+    static bool initialized = false;
+    if (initialized) {
+        return cache;
+    }
+    initialized = true;
+
+    const QStringList appDirs = QStandardPaths::standardLocations(QStandardPaths::ApplicationsLocation);
+    for (const QString &dirPath : appDirs) {
+        QDir dir(dirPath);
+        if (!dir.exists()) {
+            continue;
+        }
+        const QFileInfoList files = dir.entryInfoList({QStringLiteral("*.desktop")}, QDir::Files);
+        for (const QFileInfo &fi : files) {
+            QFile file(fi.absoluteFilePath());
+            if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                continue;
+            }
+
+            QString nameEs;
+            QString nameDefault;
+            QString icon;
+            QString categories;
+            QString wmClass;
+            QString execBin;
+            bool inMainGroup = false;
+
+            while (!file.atEnd()) {
+                const QString line = QString::fromUtf8(file.readLine()).trimmed();
+                if (line.isEmpty() || line.startsWith(QLatin1Char('#'))) {
+                    continue;
+                }
+                if (line.startsWith(QLatin1Char('['))) {
+                    inMainGroup = (line == QStringLiteral("[Desktop Entry]"));
+                    continue;
+                }
+                if (!inMainGroup) {
+                    continue;
+                }
+
+                const int eqIdx = line.indexOf(QLatin1Char('='));
+                if (eqIdx <= 0) {
+                    continue;
+                }
+                const QString key = line.left(eqIdx).trimmed();
+                const QString val = line.mid(eqIdx + 1).trimmed();
+
+                if (key == QStringLiteral("Name[es]")) {
+                    nameEs = val;
+                } else if (key == QStringLiteral("Name") && nameDefault.isEmpty()) {
+                    nameDefault = val;
+                } else if (key == QStringLiteral("Icon") && icon.isEmpty()) {
+                    icon = val;
+                } else if (key == QStringLiteral("Categories") && categories.isEmpty()) {
+                    categories = val;
+                } else if (key == QStringLiteral("StartupWMClass") && wmClass.isEmpty()) {
+                    wmClass = val.toLower();
+                } else if (key == QStringLiteral("Exec") && execBin.isEmpty()) {
+                    QString token = val.split(QLatin1Char(' '), Qt::SkipEmptyParts).value(0);
+                    token.remove(QLatin1Char('"'));
+                    execBin = QFileInfo(token).baseName().toLower();
+                }
+            }
+
+            DesktopEntryMeta meta;
+            meta.displayName = !nameEs.isEmpty() ? nameEs : nameDefault;
+            meta.iconName = icon;
+            meta.categoriesRaw = categories;
+
+            if (meta.displayName.isEmpty()) {
+                continue;
+            }
+
+            const QString stem = fi.completeBaseName().toLower();
+            if (!cache.contains(stem)) {
+                cache.insert(stem, meta);
+            }
+            const int lastDot = stem.lastIndexOf(QLatin1Char('.'));
+            if (lastDot >= 0 && lastDot + 1 < stem.size()) {
+                const QString shortStem = stem.mid(lastDot + 1);
+                if (!cache.contains(shortStem)) {
+                    cache.insert(shortStem, meta);
+                }
+            }
+            if (!wmClass.isEmpty() && !cache.contains(wmClass)) {
+                cache.insert(wmClass, meta);
+            }
+            if (!execBin.isEmpty() && !cache.contains(execBin)) {
+                cache.insert(execBin, meta);
+            }
+        }
+    }
+    return cache;
 }
+} // namespace
 
 ScreenTimeTracker::ScreenTimeTracker(const QString &storageDir, QObject *parent)
     : QObject(parent)
@@ -42,8 +150,7 @@ ScreenTimeTracker::ScreenTimeTracker(const QString &storageDir, QObject *parent)
     connect(&m_tickTimer, &QTimer::timeout, this, &ScreenTimeTracker::tickActiveApp);
 
     if (isDefaultStorage) {
-        seedInitialDataIfEmpty();
-        startLiveTracking();
+        QTimer::singleShot(0, this, &ScreenTimeTracker::startLiveTracking);
     }
 }
 
@@ -102,13 +209,13 @@ QString ScreenTimeTracker::vsAverageText() const
     const int avgSeconds = activeDays > 0 ? (sum7 / activeDays) : 0;
     const int currentSeconds = todayTotalSeconds();
     if (avgSeconds <= 0) {
-        return QStringLiteral("Sin datos previos en los últimos 7 días");
+        return QStringLiteral("Registrando actividad real en esta sesión");
     }
 
     const int diffPct = static_cast<int>(std::round(((currentSeconds - avgSeconds) * 100.0) / avgSeconds));
     const QString avgFormatted = formatDuration(avgSeconds);
     if (std::abs(diffPct) <= 2) {
-        return QStringLiteral("En la media de 7 días (%1)").arg(avgFormatted);
+        return QStringLiteral("En la media de %1 día(s) (%2)").arg(activeDays).arg(avgFormatted);
     }
     if (diffPct > 0) {
         return QStringLiteral("+%1% frente a la media (%2)").arg(diffPct).arg(avgFormatted);
@@ -124,7 +231,7 @@ QString ScreenTimeTracker::currentActiveApp() const
 QString ScreenTimeTracker::currentActiveDisplayName() const
 {
     if (m_currentActiveApp.isEmpty()) {
-        return QStringLiteral("Escritorio Wayland");
+        return QStringLiteral("Escritorio Wayland (sin ventana activa)");
     }
     return displayNameForApp(m_currentActiveApp);
 }
@@ -132,6 +239,20 @@ QString ScreenTimeTracker::currentActiveDisplayName() const
 QString ScreenTimeTracker::currentActiveCaption() const
 {
     return m_currentActiveCaption;
+}
+
+bool ScreenTimeTracker::windowVisible() const
+{
+    return m_windowVisible;
+}
+
+void ScreenTimeTracker::setWindowVisible(bool visible)
+{
+    if (m_windowVisible == visible) {
+        return;
+    }
+    m_windowVisible = visible;
+    Q_EMIT windowVisibleChanged();
 }
 
 QVariantList ScreenTimeTracker::appUsageList() const
@@ -293,16 +414,25 @@ void ScreenTimeTracker::RecordActiveApp(const QString &appClass, const QString &
     recordActiveApp(appClass, caption);
 }
 
+void ScreenTimeTracker::ShowWindow()
+{
+    setWindowVisible(true);
+    Q_EMIT showWindowRequested();
+}
+
+void ScreenTimeTracker::ClearAllData()
+{
+    clearAllData();
+}
+
 void ScreenTimeTracker::recordActiveApp(const QString &appClass, const QString &caption)
 {
     const QString normalized = normalizeAppId(appClass);
-    if (normalized.isEmpty()) {
-        return;
-    }
+    const QString cleanCaption = caption.trimmed();
 
-    const bool changed = (m_currentActiveApp != normalized) || (m_currentActiveCaption != caption.trimmed());
+    const bool changed = (m_currentActiveApp != normalized) || (m_currentActiveCaption != cleanCaption);
     m_currentActiveApp = normalized;
-    m_currentActiveCaption = caption.trimmed();
+    m_currentActiveCaption = cleanCaption;
 
     if (changed) {
         Q_EMIT activeAppChanged();
@@ -359,25 +489,35 @@ void ScreenTimeTracker::selectDate(const QString &dateStr)
 void ScreenTimeTracker::tickActiveApp()
 {
     if (m_currentActiveApp.isEmpty()) {
-        const QString fallback = detectFallbackRunningGuiApp();
-        if (!fallback.isEmpty()) {
-            recordActiveApp(fallback);
-        }
+        return;
     }
-    if (m_currentActiveApp.isEmpty()) {
+    if (m_liveMode && isScreenLocked()) {
         return;
     }
 
     const QString todayStr = QDate::currentDate().toString(Qt::ISODate);
+    // If midnight crossed while running, automatically advance selectedDate if it was tracking the previous day
+    if (m_selectedDate != todayStr && m_dailyUsage.value(m_selectedDate).isEmpty()) {
+        m_selectedDate = todayStr;
+    }
+
     m_dailyUsage[todayStr][m_currentActiveApp] += 1;
     checkAndNotifyLimit(todayStr, m_currentActiveApp);
 
     ++m_ticksSinceSave;
-    if (m_ticksSinceSave >= 10) {
+    if (m_ticksSinceSave >= 5) {
         m_ticksSinceSave = 0;
         saveToDisk();
     }
 
+    Q_EMIT dataChanged();
+}
+
+void ScreenTimeTracker::clearAllData()
+{
+    m_dailyUsage.clear();
+    m_notifiedLimits.clear();
+    saveToDisk();
     Q_EMIT dataChanged();
 }
 
@@ -393,26 +533,56 @@ bool ScreenTimeTracker::startLiveTracking()
         bus.registerService(QStringLiteral("org.cesar.kscreentime"));
         bus.registerObject(QStringLiteral("/Tracker"),
                            this,
-                           QDBusConnection::ExportAllSlots | QDBusConnection::ExportScriptableSlots);
+                           QDBusConnection::ExportAllSlots | QDBusConnection::ExportScriptableSlots | QDBusConnection::ExportAllProperties);
 
         const QString scriptPath = QDir::tempPath() + QStringLiteral("/kscreentime_kwin_hook.js");
         QFile f(scriptPath);
         if (f.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
             const QString js = QStringLiteral(
-                "function reportWindow(w) {\n"
-                "    if (!w) return;\n"
-                "    const cls = (w.resourceClass || w.desktopFileName || w.resourceName || \"\").toString();\n"
-                "    const cap = (w.caption || \"\").toString();\n"
-                "    if (cls.length > 0 && cls !== \"plasmashell\" && cls !== \"org.kde.plasmashell\") {\n"
+                "const ignored = [\n"
+                "    \"plasmashell\", \"org.kde.plasmashell\",\n"
+                "    \"kscreenlocker_greet\", \"org.kde.kscreenlocker_greet\",\n"
+                "    \"krunner\", \"org.kde.krunner\",\n"
+                "    \"klivecaptions\", \"org.cesar.klivecaptions\",\n"
+                "    \"kdictation\", \"org.cesar.kdictation\",\n"
+                "    \"kdropover\", \"org.cesar.kdropover\"\n"
+                "];\n"
+                "function isTrackable(w) {\n"
+                "    if (!w || !w.normalWindow || w.minimized || w.deleted) return false;\n"
+                "    if (w.specialWindow || w.desktopWindow || w.dock || w.splash || w.notification || w.onScreenDisplay || w.criticalNotification || w.appletPopup) return false;\n"
+                "    const cls = (w.desktopFileName || w.resourceClass || w.resourceName || \"\").toString().toLowerCase();\n"
+                "    if (cls.length === 0) return false;\n"
+                "    for (let i = 0; i < ignored.length; ++i) {\n"
+                "        if (cls === ignored[i] || cls.indexOf(ignored[i]) !== -1) return false;\n"
+                "    }\n"
+                "    return true;\n"
+                "}\n"
+                "function findTopWindow() {\n"
+                "    if (workspace.activeWindow && isTrackable(workspace.activeWindow)) {\n"
+                "        return workspace.activeWindow;\n"
+                "    }\n"
+                "    const stack = workspace.stackingOrder;\n"
+                "    if (stack && stack.length) {\n"
+                "        for (let i = stack.length - 1; i >= 0; --i) {\n"
+                "            if (isTrackable(stack[i])) {\n"
+                "                return stack[i];\n"
+                "            }\n"
+                "        }\n"
+                "    }\n"
+                "    return null;\n"
+                "}\n"
+                "function report() {\n"
+                "    const target = findTopWindow();\n"
+                "    if (target) {\n"
+                "        const cls = (target.desktopFileName || target.resourceClass || target.resourceName || \"\").toString();\n"
+                "        const cap = (target.caption || \"\").toString();\n"
                 "        callDBus(\"org.cesar.kscreentime\", \"/Tracker\", \"org.cesar.kscreentime.Tracker\", \"RecordActiveApp\", cls, cap);\n"
+                "    } else {\n"
+                "        callDBus(\"org.cesar.kscreentime\", \"/Tracker\", \"org.cesar.kscreentime.Tracker\", \"RecordActiveApp\", \"\", \"\");\n"
                 "    }\n"
                 "}\n"
-                "if (workspace.activeWindow) {\n"
-                "    reportWindow(workspace.activeWindow);\n"
-                "}\n"
-                "workspace.windowActivated.connect(function(client) {\n"
-                "    reportWindow(client);\n"
-                "});\n");
+                "report();\n"
+                "workspace.windowActivated.connect(report);\n");
             f.write(js.toUtf8());
             f.close();
 
@@ -421,27 +591,22 @@ bool ScreenTimeTracker::startLiveTracking()
                                          QStringLiteral("org.kde.kwin.Scripting"),
                                          bus);
             if (kwinScripting.isValid()) {
-                kwinScripting.call(QStringLiteral("unloadScript"), kKWinPluginName);
-                const QDBusReply<int> loadReply = kwinScripting.call(QStringLiteral("loadScript"), scriptPath, kKWinPluginName);
+                const QDBusReply<int> loadReply = kwinScripting.call(QStringLiteral("loadScript"), scriptPath);
                 if (loadReply.isValid() && loadReply.value() >= 0) {
-                    const QString scriptObjPath = QStringLiteral("/Scripting/Script%1").arg(loadReply.value());
+                    m_kwinScriptId = loadReply.value();
+                    const QString scriptObjPath = QStringLiteral("/Scripting/Script%1").arg(m_kwinScriptId);
                     QDBusInterface scriptIface(QStringLiteral("org.kde.KWin"),
                                                scriptObjPath,
                                                QStringLiteral("org.kde.kwin.Script"),
                                                bus);
                     scriptIface.call(QStringLiteral("run"));
-                    m_kwinHookLoaded = true;
                 }
             }
         }
     }
 
-    if (m_currentActiveApp.isEmpty()) {
-        recordActiveApp(detectFallbackRunningGuiApp(), QStringLiteral("Sesión activa en KDE Plasma Wayland"));
-    }
-
     m_tickTimer.start();
-    return m_kwinHookLoaded;
+    return m_kwinScriptId >= 0;
 }
 
 void ScreenTimeTracker::stopLiveTracking()
@@ -452,33 +617,54 @@ void ScreenTimeTracker::stopLiveTracking()
     }
     m_liveMode = false;
 
-    if (m_kwinHookLoaded) {
-        QDBusInterface kwinScripting(QStringLiteral("org.kde.KWin"),
-                                     QStringLiteral("/Scripting"),
-                                     QStringLiteral("org.kde.kwin.Scripting"),
-                                     QDBusConnection::sessionBus());
-        if (kwinScripting.isValid()) {
-            kwinScripting.call(QStringLiteral("unloadScript"), kKWinPluginName);
+    if (m_kwinScriptId >= 0) {
+        const QString scriptObjPath = QStringLiteral("/Scripting/Script%1").arg(m_kwinScriptId);
+        QDBusInterface scriptIface(QStringLiteral("org.kde.KWin"),
+                                   scriptObjPath,
+                                   QStringLiteral("org.kde.kwin.Script"),
+                                   QDBusConnection::sessionBus());
+        if (scriptIface.isValid()) {
+            scriptIface.call(QStringLiteral("stop"));
         }
-        m_kwinHookLoaded = false;
+        m_kwinScriptId = -1;
     }
 }
 
 QString ScreenTimeTracker::classifyAppCategory(const QString &appId)
 {
-    const QString lower = appId.trimmed().toLower();
+    const QString norm = normalizeAppId(appId);
+    const auto &entries = installedDesktopEntries();
+    if (entries.contains(norm)) {
+        const QString cats = entries.value(norm).categoriesRaw.toLower();
+        if (cats.contains(QStringLiteral("development")) || cats.contains(QStringLiteral("ide"))
+            || cats.contains(QStringLiteral("terminalemulator"))) {
+            return QStringLiteral("Desarrollo");
+        }
+        if (cats.contains(QStringLiteral("webbrowser"))) {
+            return QStringLiteral("Navegación");
+        }
+        if (cats.contains(QStringLiteral("instantmessaging")) || cats.contains(QStringLiteral("email"))
+            || cats.contains(QStringLiteral("chat")) || cats.contains(QStringLiteral("ircclient"))) {
+            return QStringLiteral("Comunicación");
+        }
+        if (cats.contains(QStringLiteral("audiovideo")) || cats.contains(QStringLiteral("audio"))
+            || cats.contains(QStringLiteral("video")) || cats.contains(QStringLiteral("graphics"))
+            || cats.contains(QStringLiteral("photography"))) {
+            return QStringLiteral("Multimedia");
+        }
+    }
 
     static const QStringList kDevKeywords = {
         QStringLiteral("code"), QStringLiteral("vscodium"), QStringLiteral("kate"),
-        QStringLiteral("kdevelop"), QStringLiteral("konsole"), QStringLiteral("alacritty"),
-        QStringLiteral("kitty"), QStringLiteral("wezterm"), QStringLiteral("ghostty"),
-        QStringLiteral("nvim"), QStringLiteral("vim"), QStringLiteral("jetbrains"),
-        QStringLiteral("clion"), QStringLiteral("pycharm"), QStringLiteral("idea"),
-        QStringLiteral("qtcreator"), QStringLiteral("cursor"), QStringLiteral("zed"),
-        QStringLiteral("antigravity")
+        QStringLiteral("kdevelop"), QStringLiteral("konsole"), QStringLiteral("yakuake"),
+        QStringLiteral("alacritty"), QStringLiteral("kitty"), QStringLiteral("wezterm"),
+        QStringLiteral("ghostty"), QStringLiteral("nvim"), QStringLiteral("vim"),
+        QStringLiteral("jetbrains"), QStringLiteral("clion"), QStringLiteral("pycharm"),
+        QStringLiteral("idea"), QStringLiteral("qtcreator"), QStringLiteral("cursor"),
+        QStringLiteral("zed"), QStringLiteral("antigravity")
     };
     for (const QString &kw : kDevKeywords) {
-        if (lower.contains(kw)) {
+        if (norm.contains(kw)) {
             return QStringLiteral("Desarrollo");
         }
     }
@@ -490,7 +676,7 @@ QString ScreenTimeTracker::classifyAppCategory(const QString &appId)
         QStringLiteral("opera"), QStringLiteral("tor")
     };
     for (const QString &kw : kBrowserKeywords) {
-        if (lower.contains(kw)) {
+        if (norm.contains(kw)) {
             return QStringLiteral("Navegación");
         }
     }
@@ -500,10 +686,11 @@ QString ScreenTimeTracker::classifyAppCategory(const QString &appId)
         QStringLiteral("elisa"), QStringLiteral("haruna"), QStringLiteral("kdenlive"),
         QStringLiteral("obs"), QStringLiteral("gimp"), QStringLiteral("inkscape"),
         QStringLiteral("krita"), QStringLiteral("blender"), QStringLiteral("audacity"),
-        QStringLiteral("gwenview"), QStringLiteral("okular")
+        QStringLiteral("gwenview"), QStringLiteral("okular"), QStringLiteral("easyeffects"),
+        QStringLiteral("kvoicememos")
     };
     for (const QString &kw : kMediaKeywords) {
-        if (lower.contains(kw)) {
+        if (norm.contains(kw)) {
             return QStringLiteral("Multimedia");
         }
     }
@@ -512,10 +699,11 @@ QString ScreenTimeTracker::classifyAppCategory(const QString &appId)
         QStringLiteral("telegram"), QStringLiteral("discord"), QStringLiteral("vesktop"),
         QStringLiteral("slack"), QStringLiteral("signal"), QStringLiteral("thunderbird"),
         QStringLiteral("kmail"), QStringLiteral("neochat"), QStringLiteral("element"),
-        QStringLiteral("whatsapp"), QStringLiteral("zoom"), QStringLiteral("teams")
+        QStringLiteral("whatsapp"), QStringLiteral("zoom"), QStringLiteral("teams"),
+        QStringLiteral("proton")
     };
     for (const QString &kw : kCommKeywords) {
-        if (lower.contains(kw)) {
+        if (norm.contains(kw)) {
             return QStringLiteral("Comunicación");
         }
     }
@@ -543,27 +731,27 @@ QString ScreenTimeTracker::formatDuration(int totalSeconds)
 
 QString ScreenTimeTracker::displayNameForApp(const QString &appId)
 {
-    const QString lower = appId.trimmed().toLower();
-    if (lower.contains(QStringLiteral("firefox"))) return QStringLiteral("Mozilla Firefox");
-    if (lower.contains(QStringLiteral("chrome")) || lower.contains(QStringLiteral("chromium"))) return QStringLiteral("Google Chrome");
-    if (lower.contains(QStringLiteral("brave"))) return QStringLiteral("Brave Browser");
-    if (lower.contains(QStringLiteral("code")) || lower.contains(QStringLiteral("vscodium"))) return QStringLiteral("VS Code");
-    if (lower.contains(QStringLiteral("antigravity"))) return QStringLiteral("Antigravity IDE");
-    if (lower.contains(QStringLiteral("konsole"))) return QStringLiteral("Konsole");
-    if (lower.contains(QStringLiteral("kate"))) return QStringLiteral("Kate Editor");
-    if (lower.contains(QStringLiteral("dolphin"))) return QStringLiteral("Dolphin");
-    if (lower.contains(QStringLiteral("telegram"))) return QStringLiteral("Telegram Desktop");
-    if (lower.contains(QStringLiteral("discord")) || lower.contains(QStringLiteral("vesktop"))) return QStringLiteral("Discord");
-    if (lower.contains(QStringLiteral("spotify"))) return QStringLiteral("Spotify");
-    if (lower.contains(QStringLiteral("vlc"))) return QStringLiteral("VLC Media Player");
-    if (lower.contains(QStringLiteral("mpv")) || lower.contains(QStringLiteral("haruna"))) return QStringLiteral("Reproductor Multimedia");
-    if (lower.contains(QStringLiteral("systemsettings"))) return QStringLiteral("Preferencias del Sistema");
-    if (lower.contains(QStringLiteral("kscreentime"))) return QStringLiteral("KScreenTime");
+    const QString norm = normalizeAppId(appId);
+    const auto &entries = installedDesktopEntries();
+    if (entries.contains(norm) && !entries.value(norm).displayName.isEmpty()) {
+        return entries.value(norm).displayName;
+    }
+
+    const int lastDot = norm.lastIndexOf(QLatin1Char('.'));
+    if (lastDot >= 0 && lastDot + 1 < norm.size()) {
+        const QString shortKey = norm.mid(lastDot + 1);
+        if (entries.contains(shortKey) && !entries.value(shortKey).displayName.isEmpty()) {
+            return entries.value(shortKey).displayName;
+        }
+    }
 
     QString cleaned = appId.trimmed();
-    const int lastDot = cleaned.lastIndexOf(QLatin1Char('.'));
-    if (lastDot >= 0 && lastDot + 1 < cleaned.size()) {
-        cleaned = cleaned.mid(lastDot + 1);
+    if (cleaned.endsWith(QStringLiteral(".desktop"), Qt::CaseInsensitive)) {
+        cleaned.chop(8);
+    }
+    const int dotIdx = cleaned.lastIndexOf(QLatin1Char('.'));
+    if (dotIdx >= 0 && dotIdx + 1 < cleaned.size()) {
+        cleaned = cleaned.mid(dotIdx + 1);
     }
     if (!cleaned.isEmpty()) {
         cleaned[0] = cleaned[0].toUpper();
@@ -573,16 +761,26 @@ QString ScreenTimeTracker::displayNameForApp(const QString &appId)
 
 QString ScreenTimeTracker::iconNameForApp(const QString &appId)
 {
-    const QString lower = appId.trimmed().toLower();
-    if (lower.contains(QStringLiteral("konsole")) || lower.contains(QStringLiteral("alacritty")) || lower.contains(QStringLiteral("kitty"))) {
-        return QStringLiteral("utilities-terminal");
+    const QString norm = normalizeAppId(appId);
+    const auto &entries = installedDesktopEntries();
+    if (entries.contains(norm)) {
+        const QString icon = entries.value(norm).iconName;
+        if (!icon.isEmpty() && (QIcon::hasThemeIcon(icon) || QFileInfo::exists(icon))) {
+            return icon;
+        }
     }
-    if (lower.contains(QStringLiteral("dolphin"))) {
-        return QStringLiteral("system-file-manager");
+
+    const int lastDot = norm.lastIndexOf(QLatin1Char('.'));
+    if (lastDot >= 0 && lastDot + 1 < norm.size()) {
+        const QString shortKey = norm.mid(lastDot + 1);
+        if (entries.contains(shortKey)) {
+            const QString icon = entries.value(shortKey).iconName;
+            if (!icon.isEmpty() && (QIcon::hasThemeIcon(icon) || QFileInfo::exists(icon))) {
+                return icon;
+            }
+        }
     }
-    if (lower.contains(QStringLiteral("firefox")) || lower.contains(QStringLiteral("chrome")) || lower.contains(QStringLiteral("brave"))) {
-        return QStringLiteral("internet-web-browser");
-    }
+
     return iconNameForCategory(classifyAppCategory(appId));
 }
 
@@ -689,46 +887,6 @@ void ScreenTimeTracker::saveToDisk() const
     }
 }
 
-void ScreenTimeTracker::seedInitialDataIfEmpty()
-{
-    if (!m_dailyUsage.isEmpty()) {
-        return;
-    }
-
-    const QDate today = QDate::currentDate();
-    struct DayProfile {
-        int codeSecs;
-        int browserSecs;
-        int terminalSecs;
-        int mediaSecs;
-        int chatSecs;
-        int systemSecs;
-    };
-
-    static const DayProfile kProfiles[7] = {
-        {5400, 3900, 2700, 1800, 1500, 900}, // -6d
-        {6200, 4100, 3100, 1200, 1800, 1100}, // -5d
-        {4800, 3600, 2400, 2100, 1400, 800}, // -4d
-        {7100, 4500, 3600, 1500, 2100, 1200}, // -3d
-        {5900, 3800, 2900, 1900, 1600, 950}, // -2d
-        {3200, 4200, 1800, 3600, 2200, 700}, // -1d
-        {5100, 3420, 2580, 1320, 1140, 780}  // today (~3h 59m)
-    };
-
-    for (int i = 0; i < 7; ++i) {
-        const QString dStr = today.addDays(-(6 - i)).toString(Qt::ISODate);
-        const DayProfile &p = kProfiles[i];
-        m_dailyUsage[dStr][QStringLiteral("code")] = p.codeSecs;
-        m_dailyUsage[dStr][QStringLiteral("firefox")] = p.browserSecs;
-        m_dailyUsage[dStr][QStringLiteral("org.kde.konsole")] = p.terminalSecs;
-        m_dailyUsage[dStr][QStringLiteral("spotify")] = p.mediaSecs;
-        m_dailyUsage[dStr][QStringLiteral("org.telegram.desktop")] = p.chatSecs;
-        m_dailyUsage[dStr][QStringLiteral("org.kde.dolphin")] = p.systemSecs;
-    }
-
-    saveToDisk();
-}
-
 void ScreenTimeTracker::checkAndNotifyLimit(const QString &dateStr, const QString &appId)
 {
     const int limitMins = m_appLimits.value(appId, 0);
@@ -780,37 +938,15 @@ void ScreenTimeTracker::sendDesktopNotification(const QString &title, const QStr
                      int(5000));
 }
 
-QString ScreenTimeTracker::detectFallbackRunningGuiApp() const
+bool ScreenTimeTracker::isScreenLocked() const
 {
-    static const QStringList kCandidates = {
-        QStringLiteral("code"),
-        QStringLiteral("firefox"),
-        QStringLiteral("konsole"),
-        QStringLiteral("dolphin"),
-        QStringLiteral("kate"),
-        QStringLiteral("telegram-desktop"),
-        QStringLiteral("spotify")
-    };
-
-    QDir procDir(QStringLiteral("/proc"));
-    const QStringList entries = procDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
-    for (const QString &pidStr : entries) {
-        bool ok = false;
-        pidStr.toInt(&ok);
-        if (!ok) {
-            continue;
-        }
-        QFile commFile(QStringLiteral("/proc/%1/comm").arg(pidStr));
-        if (commFile.open(QIODevice::ReadOnly)) {
-            const QString comm = QString::fromUtf8(commFile.readAll()).trimmed().toLower();
-            for (const QString &cand : kCandidates) {
-                if (comm == cand || comm.contains(cand)) {
-                    if (cand == QStringLiteral("konsole")) return QStringLiteral("org.kde.konsole");
-                    if (cand == QStringLiteral("dolphin")) return QStringLiteral("org.kde.dolphin");
-                    return cand;
-                }
-            }
-        }
+    QDBusInterface screenSaver(QStringLiteral("org.freedesktop.ScreenSaver"),
+                               QStringLiteral("/ScreenSaver"),
+                               QStringLiteral("org.freedesktop.ScreenSaver"),
+                               QDBusConnection::sessionBus());
+    if (!screenSaver.isValid()) {
+        return false;
     }
-    return QStringLiteral("org.kde.konsole");
+    const QDBusReply<bool> reply = screenSaver.call(QStringLiteral("GetActive"));
+    return reply.isValid() && reply.value();
 }

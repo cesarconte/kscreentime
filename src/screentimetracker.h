@@ -27,6 +27,7 @@ class ScreenTimeTracker : public QObject
     Q_PROPERTY(QVariantList appUsageList READ appUsageList NOTIFY dataChanged)
     Q_PROPERTY(QVariantList weeklyChartData READ weeklyChartData NOTIFY dataChanged)
     Q_PROPERTY(QVariantList categoryBreakdown READ categoryBreakdown NOTIFY dataChanged)
+    Q_PROPERTY(bool windowVisible READ windowVisible WRITE setWindowVisible NOTIFY windowVisibleChanged)
 
 public:
     explicit ScreenTimeTracker(const QString &storageDir = QString(), QObject *parent = nullptr);
@@ -40,6 +41,8 @@ public:
     QString currentActiveApp() const;
     QString currentActiveDisplayName() const;
     QString currentActiveCaption() const;
+    bool windowVisible() const;
+    void setWindowVisible(bool visible);
 
     QVariantList appUsageList() const;
     QVariantList weeklyChartData() const;
@@ -50,6 +53,7 @@ public:
     Q_INVOKABLE void setAppLimit(const QString &appId, int limitMinutes);
     Q_INVOKABLE void selectDate(const QString &dateStr);
     Q_INVOKABLE void tickActiveApp();
+    Q_INVOKABLE void clearAllData();
 
     bool startLiveTracking();
     void stopLiveTracking();
@@ -63,26 +67,30 @@ public:
 
 public Q_SLOTS:
     Q_SCRIPTABLE void RecordActiveApp(const QString &appClass, const QString &caption = QString());
+    Q_SCRIPTABLE void ShowWindow();
+    Q_SCRIPTABLE void ClearAllData();
 
 Q_SIGNALS:
     void dataChanged();
     void activeAppChanged();
+    void windowVisibleChanged();
+    void showWindowRequested();
     void appLimitExceeded(const QString &appId, int limitMinutes, int currentSeconds);
 
 private:
     void loadFromDisk();
     void saveToDisk() const;
-    void seedInitialDataIfEmpty();
     void checkAndNotifyLimit(const QString &dateStr, const QString &appId);
     void sendDesktopNotification(const QString &title, const QString &body) const;
-    QString detectFallbackRunningGuiApp() const;
+    bool isScreenLocked() const;
 
     QString m_storageDir;
     QString m_selectedDate;
     QString m_currentActiveApp;
     QString m_currentActiveCaption;
     bool m_liveMode = false;
-    bool m_kwinHookLoaded = false;
+    int m_kwinScriptId = -1;
+    bool m_windowVisible = true;
     int m_ticksSinceSave = 0;
 
     // dateStr ("YYYY-MM-DD") -> (appId -> seconds)
