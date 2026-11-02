@@ -85,7 +85,7 @@ Kirigami.ApplicationWindow {
 
                             QQC2.Label {
                                 text: "Tiempo de Uso (" + (root.trackerObj ? root.trackerObj.selectedDate : "Hoy") + ")"
-                                color: "#b0bec5"
+                                color: Kirigami.Theme.disabledTextColor
                                 font.pixelSize: 13
                                 font.bold: true
                                 Layout.fillWidth: true
@@ -95,14 +95,14 @@ Kirigami.ApplicationWindow {
 
                         QQC2.Label {
                             text: root.trackerObj ? root.trackerObj.todayTotalFormatted : "0m"
-                            color: "#ffffff"
+                            color: Kirigami.Theme.textColor
                             font.pixelSize: 34
                             font.bold: true
                         }
 
                         QQC2.Label {
                             text: root.trackerObj ? root.trackerObj.vsAverageText : ""
-                            color: "#00e5ff"
+                            color: Kirigami.Theme.highlightColor
                             font.pixelSize: 12
                             elide: Text.ElideRight
                             Layout.fillWidth: true
@@ -130,12 +130,12 @@ Kirigami.ApplicationWindow {
                                 width: 10
                                 height: 10
                                 radius: 5
-                                color: (root.trackerObj && root.trackerObj.currentActiveApp.length > 0) ? "#00e676" : "#78909c"
+                                color: (root.trackerObj && root.trackerObj.currentActiveApp.length > 0) ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.disabledTextColor
                             }
 
                             QQC2.Label {
                                 text: "Ventana Activa (Wayland / KWin)"
-                                color: "#b0bec5"
+                                color: Kirigami.Theme.disabledTextColor
                                 font.pixelSize: 13
                                 font.bold: true
                                 Layout.fillWidth: true
@@ -145,7 +145,7 @@ Kirigami.ApplicationWindow {
 
                         QQC2.Label {
                             text: root.trackerObj ? root.trackerObj.currentActiveDisplayName : "Escritorio Wayland"
-                            color: "#ffffff"
+                            color: Kirigami.Theme.textColor
                             font.pixelSize: 22
                             font.bold: true
                             elide: Text.ElideRight
@@ -160,7 +160,7 @@ Kirigami.ApplicationWindow {
                                 if (app.length === 0) return "Esperando foco de ventana en KWin...";
                                 return cap.length > 0 ? (app + " — " + cap) : app;
                             }
-                            color: "#90a4ae"
+                            color: Kirigami.Theme.disabledTextColor
                             font.pixelSize: 12
                             elide: Text.ElideRight
                             Layout.fillWidth: true
@@ -192,7 +192,7 @@ Kirigami.ApplicationWindow {
 
                             QQC2.Label {
                                 text: "Desglose por Categorías"
-                                color: "#b0bec5"
+                                color: Kirigami.Theme.disabledTextColor
                                 font.pixelSize: 13
                                 font.bold: true
                                 Layout.fillWidth: true
@@ -202,7 +202,7 @@ Kirigami.ApplicationWindow {
                         QQC2.Label {
                             visible: !root.trackerObj || root.trackerObj.categoryBreakdown.length === 0
                             text: "Sin actividad registrada en esta fecha"
-                            color: "#78909c"
+                            color: Kirigami.Theme.disabledTextColor
                             font.pixelSize: 12
                             Layout.fillWidth: true
                             Layout.fillHeight: true
@@ -240,14 +240,14 @@ Kirigami.ApplicationWindow {
 
                                         QQC2.Label {
                                             text: catBadge.modelData.category
-                                            color: "#eceff1"
+                                            color: Kirigami.Theme.textColor
                                             font.pixelSize: 12
                                             font.bold: true
                                         }
 
                                         QQC2.Label {
                                             text: catBadge.modelData.formattedDuration
-                                            color: "#00e5ff"
+                                            color: Kirigami.Theme.highlightColor
                                             font.pixelSize: 12
                                         }
                                     }
@@ -280,7 +280,7 @@ Kirigami.ApplicationWindow {
 
                         QQC2.Label {
                             text: "Actividad de los Últimos 7 Días (haz clic en un día para inspeccionar)"
-                            color: "#eceff1"
+                            color: Kirigami.Theme.textColor
                             font.pixelSize: 15
                             font.bold: true
                             Layout.fillWidth: true
@@ -309,7 +309,7 @@ Kirigami.ApplicationWindow {
                                     QQC2.Label {
                                         Layout.alignment: Qt.AlignHCenter
                                         text: dayBarItem.modelData.formattedDuration
-                                        color: dayBarItem.modelData.isSelected ? "#00e5ff" : "#90a4ae"
+                                        color: dayBarItem.modelData.isSelected ? Kirigami.Theme.highlightColor : Kirigami.Theme.disabledTextColor
                                         font.pixelSize: 11
                                         font.bold: dayBarItem.modelData.isSelected
                                     }
@@ -334,7 +334,7 @@ Kirigami.ApplicationWindow {
                                                     ? Math.max(6, (parent.height - 6) * dayBarItem.modelData.ratio)
                                                     : 0
                                                 radius: 6
-                                                color: dayBarItem.modelData.isSelected ? "#00e5ff" : "#26c6da"
+                                                color: dayBarItem.modelData.isSelected ? Kirigami.Theme.highlightColor : Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.highlightColor, 0.6)
                                                 opacity: dayBarItem.modelData.isSelected ? 0.92 : 0.58
 
                                                 Behavior on height {
@@ -360,7 +360,7 @@ Kirigami.ApplicationWindow {
                                     QQC2.Label {
                                         Layout.alignment: Qt.AlignHCenter
                                         text: dayBarItem.modelData.dayLabel
-                                        color: dayBarItem.modelData.isSelected ? "#ffffff" : "#b0bec5"
+                                        color: dayBarItem.modelData.isSelected ? Kirigami.Theme.highlightColor : Kirigami.Theme.disabledTextColor
                                         font.pixelSize: 12
                                         font.bold: dayBarItem.modelData.isSelected
                                     }
@@ -395,7 +395,7 @@ Kirigami.ApplicationWindow {
 
                         QQC2.Label {
                             text: "Uso Real por Aplicación y Límites Diarios"
-                            color: "#eceff1"
+                            color: Kirigami.Theme.textColor
                             font.pixelSize: 15
                             font.bold: true
                             Layout.fillWidth: true
@@ -424,7 +424,7 @@ Kirigami.ApplicationWindow {
                             anchors.centerIn: parent
                             text: "No hay actividad de aplicaciones registrada en esta fecha.\nEl monitor de KWin Wayland contabiliza en tiempo real las ventanas activas que utilizas."
                             horizontalAlignment: Text.AlignHCenter
-                            color: "#90a4ae"
+                            color: Kirigami.Theme.disabledTextColor
                             font.pixelSize: 13
                         }
                     }
@@ -462,14 +462,14 @@ Kirigami.ApplicationWindow {
 
                                         QQC2.Label {
                                             text: appCard.modelData.displayName
-                                            color: "#ffffff"
+                                            color: Kirigami.Theme.textColor
                                             font.pixelSize: 14
                                             font.bold: true
                                         }
 
                                         Rectangle {
                                             radius: 4
-                                            color: Qt.rgba(0.0, 0.9, 1.0, 0.14)
+                                            color: Kirigami.Theme.alternateBackgroundColor
                                             border.width: 1
                                             border.color: root.categoryAccentColor(appCard.modelData.category)
                                             implicitWidth: catText.implicitWidth + 12
@@ -479,7 +479,7 @@ Kirigami.ApplicationWindow {
                                                 id: catText
                                                 anchors.centerIn: parent
                                                 text: appCard.modelData.category
-                                                color: "#e0f7fa"
+                                                color: Kirigami.Theme.textColor
                                                 font.pixelSize: 11
                                             }
                                         }
@@ -487,9 +487,9 @@ Kirigami.ApplicationWindow {
                                         Rectangle {
                                             visible: appCard.modelData.limitExceeded
                                             radius: 4
-                                            color: Qt.rgba(1.0, 0.25, 0.25, 0.24)
+                                            color: Qt.rgba(Kirigami.Theme.negativeTextColor.r, Kirigami.Theme.negativeTextColor.g, Kirigami.Theme.negativeTextColor.b, 0.15)
                                             border.width: 1
-                                            border.color: "#ff5252"
+                                            border.color: Kirigami.Theme.negativeTextColor
                                             implicitWidth: limitAlertRow.implicitWidth + 12
                                             implicitHeight: 20
 
@@ -506,7 +506,7 @@ Kirigami.ApplicationWindow {
 
                                                 QQC2.Label {
                                                     text: "Límite superado (" + appCard.modelData.limitMinutes + "m)"
-                                                    color: "#ff8a80"
+                                                    color: Kirigami.Theme.negativeTextColor
                                                     font.pixelSize: 11
                                                     font.bold: true
                                                 }
@@ -520,7 +520,7 @@ Kirigami.ApplicationWindow {
                                         QQC2.Label {
                                             text: appCard.modelData.formattedDuration
                                                 + " (" + Math.round(appCard.modelData.ratio * 100) + "%)"
-                                            color: "#00e5ff"
+                                            color: Kirigami.Theme.highlightColor
                                             font.pixelSize: 13
                                             font.bold: true
                                         }
@@ -531,14 +531,14 @@ Kirigami.ApplicationWindow {
                                         Layout.fillWidth: true
                                         height: 8
                                         radius: 4
-                                        color: Qt.rgba(1.0, 1.0, 1.0, 0.10)
+                                        color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.10)
 
                                         Rectangle {
                                             width: Math.max(6, parent.width * Math.min(1.0, appCard.modelData.ratio))
                                             height: parent.height
                                             radius: 4
                                             color: appCard.modelData.limitExceeded
-                                                ? "#ff5252"
+                                                ? Kirigami.Theme.negativeTextColor
                                                 : root.categoryAccentColor(appCard.modelData.category)
                                         }
                                     }
@@ -550,7 +550,7 @@ Kirigami.ApplicationWindow {
 
                                     QQC2.Label {
                                         text: "Límite:"
-                                        color: "#90a4ae"
+                                        color: Kirigami.Theme.disabledTextColor
                                         font.pixelSize: 11
                                     }
 
