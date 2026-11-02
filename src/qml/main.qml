@@ -19,7 +19,6 @@ Kirigami.ApplicationWindow {
     minimumWidth: 820
     minimumHeight: 620
     visible: root.trackerObj ? root.trackerObj.windowVisible : true
-    color: "#090b10"
 
     readonly property var trackerObj: typeof Tracker !== "undefined" ? Tracker : null
 
@@ -51,10 +50,6 @@ Kirigami.ApplicationWindow {
         id: dashboardPage
         title: "Tiempo de Uso"
         padding: Kirigami.Units.largeSpacing
-
-        background: Rectangle {
-            color: "#090b10"
-        }
 
         ColumnLayout {
             width: dashboardPage.availableWidth
