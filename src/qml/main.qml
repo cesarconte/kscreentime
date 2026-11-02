@@ -61,12 +61,11 @@ Kirigami.ApplicationWindow {
                 spacing: Kirigami.Units.largeSpacing
 
                 // Card 1: Today's Total Screen Time & Comparison vs 7-day average
-                LiquidGlassCard {
+                QQC2.Frame {
                     Layout.fillWidth: true
                     Layout.preferredWidth: 1
                     Layout.minimumHeight: 138
-                    glassStyle: "shell"
-                    isHighlighted: true
+                    padding: Kirigami.Units.mediumSpacing
 
                     ColumnLayout {
                         anchors.fill: parent
@@ -111,11 +110,11 @@ Kirigami.ApplicationWindow {
                 }
 
                 // Card 2: Live Active Wayland Window Indicator
-                LiquidGlassCard {
+                QQC2.Frame {
                     Layout.fillWidth: true
                     Layout.preferredWidth: 1
                     Layout.minimumHeight: 138
-                    glassStyle: "shell"
+                    padding: Kirigami.Units.mediumSpacing
 
                     ColumnLayout {
                         anchors.fill: parent
@@ -169,15 +168,14 @@ Kirigami.ApplicationWindow {
                 }
 
                 // Card 3: Category Breakdown Badges
-                LiquidGlassCard {
+                QQC2.Frame {
                     Layout.fillWidth: true
                     Layout.preferredWidth: 1.25
                     Layout.minimumHeight: 138
-                    glassStyle: "shell"
+                    padding: Kirigami.Units.mediumSpacing
 
                     ColumnLayout {
                         anchors.fill: parent
-                        anchors.margins: Kirigami.Units.largeSpacing
                         spacing: Kirigami.Units.smallSpacing
 
                         RowLayout {
@@ -218,13 +216,15 @@ Kirigami.ApplicationWindow {
                             Repeater {
                                 model: root.trackerObj ? root.trackerObj.categoryBreakdown : []
 
-                                delegate: LiquidGlassCard {
+                                delegate: Rectangle {
                                     id: catBadge
                                     required property var modelData
 
                                     width: catBadgeRow.implicitWidth + Kirigami.Units.largeSpacing * 1.4
                                     height: 30
-                                    glassStyle: "recessed"
+                                    radius: Kirigami.Units.smallSpacing
+                                    color: Kirigami.Theme.backgroundColor
+                                    border.width: 1
                                     border.color: root.categoryAccentColor(catBadge.modelData.category)
 
                                     RowLayout {
@@ -259,14 +259,13 @@ Kirigami.ApplicationWindow {
             }
 
             // Middle card: Interactive 7-Day Bar Chart
-            LiquidGlassCard {
+            QQC2.Frame {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 230
-                glassStyle: "shell"
+                padding: Kirigami.Units.mediumSpacing
 
                 ColumnLayout {
                     anchors.fill: parent
-                    anchors.margins: Kirigami.Units.largeSpacing
                     spacing: Kirigami.Units.mediumSpacing
 
                     RowLayout {
@@ -318,12 +317,18 @@ Kirigami.ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.fillHeight: true
 
-                                        LiquidGlassCard {
+                                        Rectangle {
                                             anchors.fill: parent
                                             anchors.leftMargin: 8
                                             anchors.rightMargin: 8
-                                            glassStyle: "recessed"
-                                            isHighlighted: dayBarItem.modelData.isSelected
+                                            radius: Kirigami.Units.smallSpacing
+                                            color: dayBarItem.modelData.isSelected
+                                                ? Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.16)
+                                                : Kirigami.Theme.alternateBackgroundColor
+                                            border.width: 1
+                                            border.color: dayBarItem.modelData.isSelected
+                                                ? Kirigami.Theme.highlightColor
+                                                : Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.14)
 
                                             Rectangle {
                                                 anchors.left: parent.left
@@ -372,16 +377,15 @@ Kirigami.ApplicationWindow {
             }
 
             // Bottom card: Per-Application Usage List & App Limits
-            LiquidGlassCard {
+            QQC2.Frame {
                 Layout.fillWidth: true
                 Layout.minimumHeight: 220
                 implicitHeight: appListColumn.implicitHeight + Kirigami.Units.largeSpacing * 2
-                glassStyle: "shell"
+                padding: Kirigami.Units.mediumSpacing
 
                 ColumnLayout {
                     id: appListColumn
                     anchors.fill: parent
-                    anchors.margins: Kirigami.Units.largeSpacing
                     spacing: Kirigami.Units.mediumSpacing
 
                     RowLayout {
@@ -414,11 +418,14 @@ Kirigami.ApplicationWindow {
                         }
                     }
 
-                    LiquidGlassCard {
+                    Rectangle {
                         visible: !root.trackerObj || root.trackerObj.appUsageList.length === 0
                         Layout.fillWidth: true
                         Layout.preferredHeight: 96
-                        glassStyle: "recessed"
+                        radius: Kirigami.Units.smallSpacing
+                        color: Kirigami.Theme.backgroundColor
+                        border.width: 1
+                        border.color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.14)
 
                         QQC2.Label {
                             anchors.centerIn: parent
@@ -432,14 +439,20 @@ Kirigami.ApplicationWindow {
                     Repeater {
                         model: root.trackerObj ? root.trackerObj.appUsageList : []
 
-                        delegate: LiquidGlassCard {
+                        delegate: Rectangle {
                             id: appCard
                             required property var modelData
 
                             Layout.fillWidth: true
                             Layout.minimumHeight: 68
-                            glassStyle: "card"
-                            isHighlighted: appCard.modelData.limitExceeded
+                            radius: Kirigami.Units.smallSpacing
+                            color: appCard.modelData.limitExceeded
+                                ? Qt.rgba(Kirigami.Theme.negativeTextColor.r, Kirigami.Theme.negativeTextColor.g, Kirigami.Theme.negativeTextColor.b, 0.14)
+                                : Kirigami.Theme.alternateBackgroundColor
+                            border.width: 1
+                            border.color: appCard.modelData.limitExceeded
+                                ? Kirigami.Theme.negativeTextColor
+                                : Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.14)
 
                             RowLayout {
                                 anchors.fill: parent

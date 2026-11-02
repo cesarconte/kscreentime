@@ -2,6 +2,5 @@
 <RCC version="1.0">
     <qresource prefix="/org/cesar/kscreentime">
         <file>qml/main.qml</file>
-        <file>qml/LiquidGlassCard.qml</file>
     </qresource>
 </RCC>
