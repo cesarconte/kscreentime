@@ -2,9 +2,9 @@
 Type=Application
 Name=KScreenTime (Tiempo de Uso)
 GenericName=Panel de Tiempo de Uso y Límites de Aplicaciones
-Comment=Replica Tiempo de Uso (Screen Time) de macOS en KDE Plasma 6 Wayland con estética Liquid Glass
+Comment=Replica Tiempo de Uso (Screen Time) de macOS en KDE Plasma 6 Wayland
 Exec=kscreentime
 Icon=preferences-system-time
-Categories=Qt;KDE;Utility;System;
+Categories=System;Monitor;KDE;Qt;
 Terminal=false
 StartupNotify=true
