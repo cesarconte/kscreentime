@@ -9,17 +9,27 @@ import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import CachyOS.UI
 
-Kirigami.ApplicationWindow {
+CachyWindow {
     id: root
 
-    title: "KScreenTime — Tiempo de Uso"
+    title: "Screen Time — KScreenTime"
     width: 980
-    height: 760
-    minimumWidth: 820
-    minimumHeight: 620
+    height: 700
+    minimumWidth: 800
+    minimumHeight: 560
     visible: root.trackerObj ? root.trackerObj.windowVisible : true
 
+    showTrafficLights: true
+    showTitleBarDivider: true
+    showWindowFrame: true
+    sidebarVisible: root.showSidebar
+    sidebarWidth: 232
+    cornerRadius: CachyTheme.radiusWindow
+
+    property bool showSidebar: true
+    property string activeSection: "activity"
     readonly property var trackerObj: typeof Tracker !== "undefined" ? Tracker : null
 
     onClosing: (close) => {
@@ -39,216 +49,385 @@ Kirigami.ApplicationWindow {
     }
 
     function categoryAccentColor(cat: string): color {
-        if (cat === "Desarrollo") return "#00e5ff";
-        if (cat === "Navegación") return "#4fc3f7";
-        if (cat === "Multimedia") return "#ba68c8";
-        if (cat === "Comunicación") return "#66bb6a";
-        return "#ffb74d";
+        if (cat === "Desarrollo") return "#007AFF";
+        if (cat === "Navegación") return "#32ADE6";
+        if (cat === "Multimedia") return "#AF52DE";
+        if (cat === "Comunicación") return "#34C759";
+        return "#FF9500";
     }
 
-    pageStack.initialPage: Kirigami.ScrollablePage {
-        id: dashboardPage
-        title: "Tiempo de Uso"
-        padding: Kirigami.Units.largeSpacing
-
+    // =========================================================================
+    // 1. GOLDEN GATE EDGE-TO-EDGE SCREEN TIME SIDEBAR
+    // =========================================================================
+    sidebar: [
         ColumnLayout {
-            width: dashboardPage.availableWidth
-            spacing: Kirigami.Units.largeSpacing
+            anchors.fill: parent
+            anchors.leftMargin: 10
+            anchors.rightMargin: 10
+            anchors.bottomMargin: 12
+            spacing: 4
 
-            // Top summary row: 3 Liquid Glass cards
-            RowLayout {
+            Text {
+                Layout.leftMargin: 8
+                Layout.bottomMargin: 4
+                text: "Screen Time"
+                font.pixelSize: 11
+                font.weight: Font.DemiBold
+                color: CachyTheme.textMuted
+            }
+
+            CachySidebarItem {
                 Layout.fillWidth: true
-                spacing: Kirigami.Units.largeSpacing
+                text: "App & Website Activity"
+                iconGlyph: "📊"
+                iconColor: "#007AFF"
+                squircleIconBadge: true
+                selected: root.activeSection === "activity"
+                onClicked: root.activeSection = "activity"
+            }
 
-                // Card 1: Today's Total Screen Time & Comparison vs 7-day average
-                QQC2.Frame {
-                    Layout.fillWidth: true
-                    Layout.preferredWidth: 1
-                    Layout.minimumHeight: 138
-                    padding: Kirigami.Units.mediumSpacing
+            CachySidebarItem {
+                Layout.fillWidth: true
+                text: "Active Window (KWin)"
+                iconGlyph: "🪟"
+                iconColor: "#34C759"
+                squircleIconBadge: true
+                selected: root.activeSection === "live"
+                onClicked: root.activeSection = "live"
+            }
 
-                    ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: Kirigami.Units.largeSpacing
-                        spacing: Kirigami.Units.smallSpacing
+            CachySidebarItem {
+                Layout.fillWidth: true
+                text: "Categories Breakdown"
+                iconGlyph: "🏷"
+                iconColor: "#AF52DE"
+                squircleIconBadge: true
+                selected: root.activeSection === "categories"
+                onClicked: root.activeSection = "categories"
+            }
 
-                        RowLayout {
+            Text {
+                Layout.leftMargin: 8
+                Layout.topMargin: 10
+                Layout.bottomMargin: 4
+                text: "Limit Usage"
+                font.pixelSize: 11
+                font.weight: Font.DemiBold
+                color: CachyTheme.textMuted
+            }
+
+            CachySidebarItem {
+                Layout.fillWidth: true
+                text: "App Limits"
+                iconGlyph: "⏳"
+                iconColor: "#FF9500"
+                squircleIconBadge: true
+                badgeText: root.trackerObj ? String(root.trackerObj.appUsageList.length) : "0"
+                selected: root.activeSection === "limits"
+                onClicked: root.activeSection = "limits"
+            }
+
+            Item { Layout.fillHeight: true }
+
+            // Bottom Live Wayland Active Window Pill inside Sidebar
+            Rectangle {
+                Layout.fillWidth: true
+                implicitHeight: liveSidebarCol.implicitHeight + 18
+                radius: 12
+                color: CachyTheme.cardBackground
+                border.width: 1
+                border.color: CachyTheme.specularBorder
+
+                ColumnLayout {
+                    id: liveSidebarCol
+                    anchors.fill: parent
+                    anchors.margins: 9
+                    spacing: 3
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+
+                        Rectangle {
+                            width: 7
+                            height: 7
+                            radius: 3.5
+                            color: (root.trackerObj && root.trackerObj.currentActiveApp.length > 0)
+                                ? "#34C759"
+                                : CachyTheme.textMuted
+                        }
+
+                        Text {
                             Layout.fillWidth: true
-                            spacing: Kirigami.Units.smallSpacing
+                            text: "KWin Wayland Live"
+                            font.pixelSize: 10
+                            font.weight: Font.Bold
+                            color: CachyTheme.textMuted
+                            elide: Text.ElideRight
+                        }
+                    }
 
-                            Kirigami.Icon {
-                                source: "preferences-system-time"
-                                Layout.preferredWidth: 22
-                                Layout.preferredHeight: 22
-                            }
+                    Text {
+                        Layout.fillWidth: true
+                        text: root.trackerObj ? root.trackerObj.currentActiveDisplayName : "Escritorio Wayland"
+                        font.pixelSize: 12
+                        font.weight: Font.DemiBold
+                        color: CachyTheme.textPrimary
+                        elide: Text.ElideRight
+                    }
 
-                            QQC2.Label {
+                    Text {
+                        Layout.fillWidth: true
+                        text: root.trackerObj ? root.trackerObj.todayTotalFormatted : "0m"
+                        font.pixelSize: 11
+                        font.weight: Font.Bold
+                        color: CachyTheme.accentColor
+                        elide: Text.ElideRight
+                    }
+                }
+            }
+        }
+    ]
+
+    // =========================================================================
+    // 2. GOLDEN GATE 44PX HEADER TOOLBAR
+    // =========================================================================
+    headerLeading: [
+        RowLayout {
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 8
+
+            CachyToolbarButton {
+                text: "☰"
+                tooltipText: "Mostrar/ocultar barra lateral"
+                onClicked: root.showSidebar = !root.showSidebar
+            }
+
+            Text {
+                text: "Fecha: " + (root.trackerObj ? root.trackerObj.selectedDate : "Hoy")
+                font.pixelSize: 12
+                font.weight: Font.DemiBold
+                color: CachyTheme.textSecondary
+            }
+        }
+    ]
+
+    headerActions: [
+        RowLayout {
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 6
+
+            CachyToolbarButton {
+                text: "Reiniciar"
+                implicitWidth: 74
+                enabled: Boolean(root.trackerObj && root.trackerObj.todayTotalSeconds > 0)
+                tooltipText: "Reiniciar historial de tiempo de uso"
+                onClicked: {
+                    if (root.trackerObj) {
+                        root.trackerObj.clearAllData();
+                    }
+                }
+            }
+        }
+    ]
+
+    // =========================================================================
+    // 3. MAIN SCROLLABLE DASHBOARD (Strictly Zero Horizontal Overflow)
+    // =========================================================================
+    contentData: [
+        QQC2.ScrollView {
+            id: mainScroll
+            anchors.fill: parent
+            contentWidth: availableWidth
+            QQC2.ScrollBar.horizontal.policy: QQC2.ScrollBar.AlwaysOff
+            clip: true
+
+            ColumnLayout {
+                width: mainScroll.availableWidth - 32
+                x: 16
+                y: 16
+                spacing: 14
+
+                // Top Row: 3 Golden Gate Summary Cards
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+
+                    // Card 1: Daily Total & vs Average
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 1
+                        Layout.minimumHeight: 118
+                        radius: 16
+                        color: CachyTheme.cardBackground
+                        border.width: 1
+                        border.color: CachyTheme.specularBorder
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: 14
+                            spacing: 4
+
+                            Text {
+                                Layout.fillWidth: true
                                 text: "Tiempo de Uso (" + (root.trackerObj ? root.trackerObj.selectedDate : "Hoy") + ")"
-                                color: Kirigami.Theme.disabledTextColor
-                                font.pixelSize: 13
-                                font.bold: true
+                                color: CachyTheme.textMuted
+                                font.pixelSize: 11
+                                font.weight: Font.DemiBold
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
                                 Layout.fillWidth: true
+                                text: root.trackerObj ? root.trackerObj.todayTotalFormatted : "0m"
+                                color: CachyTheme.textPrimary
+                                font.pixelSize: 28
+                                font.weight: Font.Bold
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                Layout.fillWidth: true
+                                text: root.trackerObj ? root.trackerObj.vsAverageText : ""
+                                color: CachyTheme.accentColor
+                                font.pixelSize: 11
+                                font.weight: Font.Medium
                                 elide: Text.ElideRight
                             }
                         }
-
-                        QQC2.Label {
-                            text: root.trackerObj ? root.trackerObj.todayTotalFormatted : "0m"
-                            color: Kirigami.Theme.textColor
-                            font.pixelSize: 34
-                            font.bold: true
-                        }
-
-                        QQC2.Label {
-                            text: root.trackerObj ? root.trackerObj.vsAverageText : ""
-                            color: Kirigami.Theme.highlightColor
-                            font.pixelSize: 12
-                            elide: Text.ElideRight
-                            Layout.fillWidth: true
-                        }
                     }
-                }
 
-                // Card 2: Live Active Wayland Window Indicator
-                QQC2.Frame {
-                    Layout.fillWidth: true
-                    Layout.preferredWidth: 1
-                    Layout.minimumHeight: 138
-                    padding: Kirigami.Units.mediumSpacing
+                    // Card 2: Active KWin Wayland Window
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 1
+                        Layout.minimumHeight: 118
+                        radius: 16
+                        color: CachyTheme.cardBackground
+                        border.width: 1
+                        border.color: CachyTheme.specularBorder
 
-                    ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: Kirigami.Units.largeSpacing
-                        spacing: Kirigami.Units.smallSpacing
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: 14
+                            spacing: 4
 
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: Kirigami.Units.smallSpacing
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 6
 
-                            Rectangle {
-                                width: 10
-                                height: 10
-                                radius: 5
-                                color: (root.trackerObj && root.trackerObj.currentActiveApp.length > 0) ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.disabledTextColor
+                                Rectangle {
+                                    width: 8
+                                    height: 8
+                                    radius: 4
+                                    color: (root.trackerObj && root.trackerObj.currentActiveApp.length > 0) ? "#34C759" : CachyTheme.textMuted
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: "Ventana Activa (Wayland / KWin)"
+                                    color: CachyTheme.textMuted
+                                    font.pixelSize: 11
+                                    font.weight: Font.DemiBold
+                                    elide: Text.ElideRight
+                                }
                             }
 
-                            QQC2.Label {
-                                text: "Ventana Activa (Wayland / KWin)"
-                                color: Kirigami.Theme.disabledTextColor
-                                font.pixelSize: 13
-                                font.bold: true
+                            Text {
                                 Layout.fillWidth: true
+                                text: root.trackerObj ? root.trackerObj.currentActiveDisplayName : "Escritorio Wayland"
+                                color: CachyTheme.textPrimary
+                                font.pixelSize: 18
+                                font.weight: Font.Bold
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                Layout.fillWidth: true
+                                text: {
+                                    if (!root.trackerObj) return "";
+                                    const cap = root.trackerObj.currentActiveCaption;
+                                    const app = root.trackerObj.currentActiveApp;
+                                    if (app.length === 0) return "Esperando foco de ventana en KWin…";
+                                    return cap.length > 0 ? (app + " — " + cap) : app;
+                                }
+                                color: CachyTheme.textSecondary
+                                font.pixelSize: 11
                                 elide: Text.ElideRight
                             }
                         }
-
-                        QQC2.Label {
-                            text: root.trackerObj ? root.trackerObj.currentActiveDisplayName : "Escritorio Wayland"
-                            color: Kirigami.Theme.textColor
-                            font.pixelSize: 22
-                            font.bold: true
-                            elide: Text.ElideRight
-                            Layout.fillWidth: true
-                        }
-
-                        QQC2.Label {
-                            text: {
-                                if (!root.trackerObj) return "";
-                                const cap = root.trackerObj.currentActiveCaption;
-                                const app = root.trackerObj.currentActiveApp;
-                                if (app.length === 0) return "Esperando foco de ventana en KWin...";
-                                return cap.length > 0 ? (app + " — " + cap) : app;
-                            }
-                            color: Kirigami.Theme.disabledTextColor
-                            font.pixelSize: 12
-                            elide: Text.ElideRight
-                            Layout.fillWidth: true
-                        }
                     }
-                }
 
-                // Card 3: Category Breakdown Badges
-                QQC2.Frame {
-                    Layout.fillWidth: true
-                    Layout.preferredWidth: 1.25
-                    Layout.minimumHeight: 138
-                    padding: Kirigami.Units.mediumSpacing
+                    // Card 3: Categories Breakdown
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 1.2
+                        Layout.minimumHeight: 118
+                        radius: 16
+                        color: CachyTheme.cardBackground
+                        border.width: 1
+                        border.color: CachyTheme.specularBorder
 
-                    ColumnLayout {
-                        anchors.fill: parent
-                        spacing: Kirigami.Units.smallSpacing
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: 14
+                            spacing: 6
 
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: Kirigami.Units.smallSpacing
-
-                            Kirigami.Icon {
-                                source: "view-statistics"
-                                Layout.preferredWidth: 20
-                                Layout.preferredHeight: 20
-                            }
-
-                            QQC2.Label {
+                            Text {
+                                Layout.fillWidth: true
                                 text: "Desglose por Categorías"
-                                color: Kirigami.Theme.disabledTextColor
-                                font.pixelSize: 13
-                                font.bold: true
-                                Layout.fillWidth: true
+                                color: CachyTheme.textMuted
+                                font.pixelSize: 11
+                                font.weight: Font.DemiBold
+                                elide: Text.ElideRight
                             }
-                        }
 
-                        QQC2.Label {
-                            visible: !root.trackerObj || root.trackerObj.categoryBreakdown.length === 0
-                            text: "Sin actividad registrada en esta fecha"
-                            color: Kirigami.Theme.disabledTextColor
-                            font.pixelSize: 12
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            verticalAlignment: Text.AlignVCenter
-                        }
+                            Text {
+                                visible: !root.trackerObj || root.trackerObj.categoryBreakdown.length === 0
+                                text: "Sin actividad registrada en esta fecha"
+                                color: CachyTheme.textSecondary
+                                font.pixelSize: 11
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                            }
 
-                        Flow {
-                            visible: root.trackerObj && root.trackerObj.categoryBreakdown.length > 0
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            spacing: Kirigami.Units.smallSpacing
+                            Flow {
+                                visible: Boolean(root.trackerObj && root.trackerObj.categoryBreakdown.length > 0)
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                spacing: 6
 
-                            Repeater {
-                                model: root.trackerObj ? root.trackerObj.categoryBreakdown : []
+                                Repeater {
+                                    model: root.trackerObj ? root.trackerObj.categoryBreakdown : []
 
-                                delegate: Rectangle {
-                                    id: catBadge
-                                    required property var modelData
+                                    Rectangle {
+                                        id: catBadge
+                                        required property var modelData
+                                        height: 24
+                                        implicitWidth: catRow.implicitWidth + 14
+                                        radius: 12
+                                        color: CachyTheme.surfacePill
+                                        border.width: 1
+                                        border.color: root.categoryAccentColor(catBadge.modelData.category)
 
-                                    width: catBadgeRow.implicitWidth + Kirigami.Units.largeSpacing * 1.4
-                                    height: 30
-                                    radius: Kirigami.Units.smallSpacing
-                                    color: Kirigami.Theme.backgroundColor
-                                    border.width: 1
-                                    border.color: root.categoryAccentColor(catBadge.modelData.category)
+                                        RowLayout {
+                                            id: catRow
+                                            anchors.centerIn: parent
+                                            spacing: 4
 
-                                    RowLayout {
-                                        id: catBadgeRow
-                                        anchors.centerIn: parent
-                                        spacing: 6
+                                            Text {
+                                                text: catBadge.modelData.category
+                                                color: CachyTheme.textPrimary
+                                                font.pixelSize: 11
+                                                font.weight: Font.DemiBold
+                                            }
 
-                                        Kirigami.Icon {
-                                            source: catBadge.modelData.iconName
-                                            Layout.preferredWidth: 15
-                                            Layout.preferredHeight: 15
-                                        }
-
-                                        QQC2.Label {
-                                            text: catBadge.modelData.category
-                                            color: Kirigami.Theme.textColor
-                                            font.pixelSize: 12
-                                            font.bold: true
-                                        }
-
-                                        QQC2.Label {
-                                            text: catBadge.modelData.formattedDuration
-                                            color: Kirigami.Theme.highlightColor
-                                            font.pixelSize: 12
+                                            Text {
+                                                text: catBadge.modelData.formattedDuration
+                                                color: root.categoryAccentColor(catBadge.modelData.category)
+                                                font.pixelSize: 11
+                                                font.weight: Font.Bold
+                                            }
                                         }
                                     }
                                 }
@@ -256,79 +435,69 @@ Kirigami.ApplicationWindow {
                         }
                     }
                 }
-            }
 
-            // Middle card: Interactive 7-Day Bar Chart
-            QQC2.Frame {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 230
-                padding: Kirigami.Units.mediumSpacing
+                // Middle Card: Interactive 7-Day Activity Bar Chart
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 196
+                    radius: 16
+                    color: CachyTheme.cardBackground
+                    border.width: 1
+                    border.color: CachyTheme.specularBorder
 
-                ColumnLayout {
-                    anchors.fill: parent
-                    spacing: Kirigami.Units.mediumSpacing
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: 14
+                        spacing: 10
 
-                    RowLayout {
-                        Layout.fillWidth: true
-
-                        Kirigami.Icon {
-                            source: "clock"
-                            Layout.preferredWidth: 20
-                            Layout.preferredHeight: 20
-                        }
-
-                        QQC2.Label {
-                            text: "Actividad de los Últimos 7 Días (haz clic en un día para inspeccionar)"
-                            color: Kirigami.Theme.textColor
-                            font.pixelSize: 15
-                            font.bold: true
+                        Text {
                             Layout.fillWidth: true
+                            text: "Actividad de los Últimos 7 Días (haz clic en un día para inspeccionar)"
+                            color: CachyTheme.textPrimary
+                            font.pixelSize: 13
+                            font.weight: Font.Bold
+                            elide: Text.ElideRight
                         }
-                    }
 
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        spacing: Kirigami.Units.largeSpacing
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            spacing: 10
 
-                        Repeater {
-                            model: root.trackerObj ? root.trackerObj.weeklyChartData : []
+                            Repeater {
+                                model: root.trackerObj ? root.trackerObj.weeklyChartData : []
 
-                            delegate: Item {
-                                id: dayBarItem
-                                required property var modelData
+                                Item {
+                                    id: dayBarItem
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
 
-                                Layout.fillWidth: true
-                                Layout.fillHeight: true
+                                    ColumnLayout {
+                                        anchors.fill: parent
+                                        spacing: 4
 
-                                ColumnLayout {
-                                    anchors.fill: parent
-                                    spacing: 6
-
-                                    QQC2.Label {
-                                        Layout.alignment: Qt.AlignHCenter
-                                        text: dayBarItem.modelData.formattedDuration
-                                        color: dayBarItem.modelData.isSelected ? Kirigami.Theme.highlightColor : Kirigami.Theme.disabledTextColor
-                                        font.pixelSize: 11
-                                        font.bold: dayBarItem.modelData.isSelected
-                                    }
-
-                                    Item {
-                                        Layout.fillWidth: true
-                                        Layout.fillHeight: true
+                                        Text {
+                                            Layout.alignment: Qt.AlignHCenter
+                                            text: dayBarItem.modelData.formattedDuration
+                                            color: dayBarItem.modelData.isSelected ? CachyTheme.accentColor : CachyTheme.textSecondary
+                                            font.pixelSize: 10
+                                            font.weight: dayBarItem.modelData.isSelected ? Font.Bold : Font.Normal
+                                        }
 
                                         Rectangle {
-                                            anchors.fill: parent
-                                            anchors.leftMargin: 8
-                                            anchors.rightMargin: 8
-                                            radius: Kirigami.Units.smallSpacing
+                                            Layout.fillWidth: true
+                                            Layout.fillHeight: true
+                                            Layout.leftMargin: 6
+                                            Layout.rightMargin: 6
+                                            radius: 8
                                             color: dayBarItem.modelData.isSelected
-                                                ? Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.16)
-                                                : Kirigami.Theme.alternateBackgroundColor
+                                                ? CachyTheme.withAlpha(CachyTheme.accentColor, 0.14)
+                                                : CachyTheme.surfacePill
                                             border.width: 1
                                             border.color: dayBarItem.modelData.isSelected
-                                                ? Kirigami.Theme.highlightColor
-                                                : Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.14)
+                                                ? CachyTheme.accentColor
+                                                : CachyTheme.specularBorder
 
                                             Rectangle {
                                                 anchors.left: parent.left
@@ -339,278 +508,185 @@ Kirigami.ApplicationWindow {
                                                     ? Math.max(6, (parent.height - 6) * dayBarItem.modelData.ratio)
                                                     : 0
                                                 radius: 6
-                                                color: dayBarItem.modelData.isSelected ? Kirigami.Theme.highlightColor : Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.highlightColor, 0.6)
-                                                opacity: dayBarItem.modelData.isSelected ? 0.92 : 0.58
+                                                color: CachyTheme.accentColor
+                                                opacity: dayBarItem.modelData.isSelected ? 0.95 : 0.55
 
                                                 Behavior on height {
-                                                    NumberAnimation {
-                                                        duration: 220
-                                                        easing.type: Easing.OutCubic
+                                                    NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                                                }
+                                            }
+
+                                            TapHandler {
+                                                onTapped: {
+                                                    if (root.trackerObj) {
+                                                        root.trackerObj.selectDate(dayBarItem.modelData.date);
                                                     }
                                                 }
                                             }
                                         }
 
-                                        MouseArea {
-                                            anchors.fill: parent
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: {
-                                                if (root.trackerObj) {
-                                                    root.trackerObj.selectDate(dayBarItem.modelData.date);
-                                                }
-                                            }
+                                        Text {
+                                            Layout.alignment: Qt.AlignHCenter
+                                            text: dayBarItem.modelData.dayLabel
+                                            color: dayBarItem.modelData.isSelected ? CachyTheme.accentColor : CachyTheme.textSecondary
+                                            font.pixelSize: 11
+                                            font.weight: dayBarItem.modelData.isSelected ? Font.Bold : Font.Normal
                                         }
-                                    }
-
-                                    QQC2.Label {
-                                        Layout.alignment: Qt.AlignHCenter
-                                        text: dayBarItem.modelData.dayLabel
-                                        color: dayBarItem.modelData.isSelected ? Kirigami.Theme.highlightColor : Kirigami.Theme.disabledTextColor
-                                        font.pixelSize: 12
-                                        font.bold: dayBarItem.modelData.isSelected
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            // Bottom card: Per-Application Usage List & App Limits
-            QQC2.Frame {
-                Layout.fillWidth: true
-                Layout.minimumHeight: 220
-                implicitHeight: appListColumn.implicitHeight + Kirigami.Units.largeSpacing * 2
-                padding: Kirigami.Units.mediumSpacing
+                // Bottom Card: Per-Application Usage List & Daily App Limits
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: appListColumn.implicitHeight + 28
+                    radius: 16
+                    color: CachyTheme.cardBackground
+                    border.width: 1
+                    border.color: CachyTheme.specularBorder
 
-                ColumnLayout {
-                    id: appListColumn
-                    anchors.fill: parent
-                    spacing: Kirigami.Units.mediumSpacing
+                    ColumnLayout {
+                        id: appListColumn
+                        anchors.fill: parent
+                        anchors.margins: 14
+                        spacing: 10
 
-                    RowLayout {
-                        Layout.fillWidth: true
-
-                        Kirigami.Icon {
-                            source: "application-x-executable"
-                            Layout.preferredWidth: 20
-                            Layout.preferredHeight: 20
-                        }
-
-                        QQC2.Label {
+                        Text {
+                            Layout.fillWidth: true
                             text: "Uso Real por Aplicación y Límites Diarios"
-                            color: Kirigami.Theme.textColor
-                            font.pixelSize: 15
-                            font.bold: true
+                            color: CachyTheme.textPrimary
+                            font.pixelSize: 14
+                            font.weight: Font.Bold
+                            elide: Text.ElideRight
+                        }
+
+                        Text {
+                            visible: !root.trackerObj || root.trackerObj.appUsageList.length === 0
                             Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            text: "No hay actividad de aplicaciones registrada en esta fecha."
+                            color: CachyTheme.textSecondary
+                            font.pixelSize: 12
                         }
 
-                        QQC2.Button {
-                            icon.name: "edit-clear-history"
-                            text: "Reiniciar historial"
-                            flat: true
-                            enabled: root.trackerObj && root.trackerObj.todayTotalSeconds > 0
-                            onClicked: {
-                                if (root.trackerObj) {
-                                    root.trackerObj.clearAllData();
-                                }
-                            }
-                        }
-                    }
+                        Repeater {
+                            model: root.trackerObj ? root.trackerObj.appUsageList : []
 
-                    Rectangle {
-                        visible: !root.trackerObj || root.trackerObj.appUsageList.length === 0
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 96
-                        radius: Kirigami.Units.smallSpacing
-                        color: Kirigami.Theme.backgroundColor
-                        border.width: 1
-                        border.color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.14)
+                            Rectangle {
+                                id: appCard
+                                required property var modelData
+                                Layout.fillWidth: true
+                                implicitHeight: 62
+                                radius: 12
+                                color: appCard.modelData.limitExceeded
+                                    ? "#1FFF3B30"
+                                    : CachyTheme.surfacePill
+                                border.width: 1
+                                border.color: appCard.modelData.limitExceeded
+                                    ? "#FF3B30"
+                                    : CachyTheme.specularBorder
 
-                        QQC2.Label {
-                            anchors.centerIn: parent
-                            text: "No hay actividad de aplicaciones registrada en esta fecha.\nEl monitor de KWin Wayland contabiliza en tiempo real las ventanas activas que utilizas."
-                            horizontalAlignment: Text.AlignHCenter
-                            color: Kirigami.Theme.disabledTextColor
-                            font.pixelSize: 13
-                        }
-                    }
-
-                    Repeater {
-                        model: root.trackerObj ? root.trackerObj.appUsageList : []
-
-                        delegate: Rectangle {
-                            id: appCard
-                            required property var modelData
-
-                            Layout.fillWidth: true
-                            Layout.minimumHeight: 68
-                            radius: Kirigami.Units.smallSpacing
-                            color: appCard.modelData.limitExceeded
-                                ? Qt.rgba(Kirigami.Theme.negativeTextColor.r, Kirigami.Theme.negativeTextColor.g, Kirigami.Theme.negativeTextColor.b, 0.14)
-                                : Kirigami.Theme.alternateBackgroundColor
-                            border.width: 1
-                            border.color: appCard.modelData.limitExceeded
-                                ? Kirigami.Theme.negativeTextColor
-                                : Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.14)
-
-                            RowLayout {
-                                anchors.fill: parent
-                                anchors.margins: Kirigami.Units.mediumSpacing
-                                spacing: Kirigami.Units.mediumSpacing
-
-                                Kirigami.Icon {
-                                    source: appCard.modelData.iconName
-                                    Layout.preferredWidth: 32
-                                    Layout.preferredHeight: 32
-                                }
-
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 4
-
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        spacing: Kirigami.Units.smallSpacing
-
-                                        QQC2.Label {
-                                            text: appCard.modelData.displayName
-                                            color: Kirigami.Theme.textColor
-                                            font.pixelSize: 14
-                                            font.bold: true
-                                        }
-
-                                        Rectangle {
-                                            radius: 4
-                                            color: Kirigami.Theme.alternateBackgroundColor
-                                            border.width: 1
-                                            border.color: root.categoryAccentColor(appCard.modelData.category)
-                                            implicitWidth: catText.implicitWidth + 12
-                                            implicitHeight: 20
-
-                                            QQC2.Label {
-                                                id: catText
-                                                anchors.centerIn: parent
-                                                text: appCard.modelData.category
-                                                color: Kirigami.Theme.textColor
-                                                font.pixelSize: 11
-                                            }
-                                        }
-
-                                        Rectangle {
-                                            visible: appCard.modelData.limitExceeded
-                                            radius: 4
-                                            color: Qt.rgba(Kirigami.Theme.negativeTextColor.r, Kirigami.Theme.negativeTextColor.g, Kirigami.Theme.negativeTextColor.b, 0.15)
-                                            border.width: 1
-                                            border.color: Kirigami.Theme.negativeTextColor
-                                            implicitWidth: limitAlertRow.implicitWidth + 12
-                                            implicitHeight: 20
-
-                                            RowLayout {
-                                                id: limitAlertRow
-                                                anchors.centerIn: parent
-                                                spacing: 4
-
-                                                Kirigami.Icon {
-                                                    source: "dialog-warning"
-                                                    Layout.preferredWidth: 14
-                                                    Layout.preferredHeight: 14
-                                                }
-
-                                                QQC2.Label {
-                                                    text: "Límite superado (" + appCard.modelData.limitMinutes + "m)"
-                                                    color: Kirigami.Theme.negativeTextColor
-                                                    font.pixelSize: 11
-                                                    font.bold: true
-                                                }
-                                            }
-                                        }
-
-                                        Item {
-                                            Layout.fillWidth: true
-                                        }
-
-                                        QQC2.Label {
-                                            text: appCard.modelData.formattedDuration
-                                                + " (" + Math.round(appCard.modelData.ratio * 100) + "%)"
-                                            color: Kirigami.Theme.highlightColor
-                                            font.pixelSize: 13
-                                            font.bold: true
-                                        }
-                                    }
-
-                                    // Usage progress bar
-                                    Rectangle {
-                                        Layout.fillWidth: true
-                                        height: 8
-                                        radius: 4
-                                        color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.10)
-
-                                        Rectangle {
-                                            width: Math.max(6, parent.width * Math.min(1.0, appCard.modelData.ratio))
-                                            height: parent.height
-                                            radius: 4
-                                            color: appCard.modelData.limitExceeded
-                                                ? Kirigami.Theme.negativeTextColor
-                                                : root.categoryAccentColor(appCard.modelData.category)
-                                        }
-                                    }
-                                }
-
-                                // Daily App Limit selector buttons (15m, 30m, 60m, Sin límite)
                                 RowLayout {
-                                    spacing: 4
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 12
+                                    anchors.rightMargin: 12
+                                    spacing: 10
 
-                                    QQC2.Label {
-                                        text: "Límite:"
-                                        color: Kirigami.Theme.disabledTextColor
-                                        font.pixelSize: 11
+                                    Kirigami.Icon {
+                                        source: appCard.modelData.iconName
+                                        Layout.preferredWidth: 28
+                                        Layout.preferredHeight: 28
                                     }
 
-                                    QQC2.Button {
-                                        text: "15m"
-                                        flat: appCard.modelData.limitMinutes !== 15
-                                        highlighted: appCard.modelData.limitMinutes === 15
-                                        Layout.preferredHeight: 28
-                                        onClicked: {
-                                            if (root.trackerObj) {
-                                                root.trackerObj.setAppLimit(appCard.modelData.appId, 15);
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 4
+
+                                        RowLayout {
+                                            Layout.fillWidth: true
+                                            spacing: 8
+
+                                            Text {
+                                                Layout.fillWidth: true
+                                                text: appCard.modelData.displayName
+                                                color: CachyTheme.textPrimary
+                                                font.pixelSize: 13
+                                                font.weight: Font.Bold
+                                                elide: Text.ElideRight
+                                            }
+
+                                            Text {
+                                                text: appCard.modelData.category
+                                                color: root.categoryAccentColor(appCard.modelData.category)
+                                                font.pixelSize: 11
+                                                font.weight: Font.DemiBold
+                                            }
+
+                                            Text {
+                                                text: appCard.modelData.formattedDuration + " (" + Math.round(appCard.modelData.ratio * 100) + "%)"
+                                                color: CachyTheme.accentColor
+                                                font.pixelSize: 12
+                                                font.weight: Font.Bold
+                                            }
+                                        }
+
+                                        Rectangle {
+                                            Layout.fillWidth: true
+                                            height: 6
+                                            radius: 3
+                                            color: CachyTheme.withAlpha(CachyTheme.textMuted, 0.18)
+
+                                            Rectangle {
+                                                width: Math.max(6, parent.width * Math.min(1.0, appCard.modelData.ratio))
+                                                height: parent.height
+                                                radius: 3
+                                                color: appCard.modelData.limitExceeded
+                                                    ? "#FF3B30"
+                                                    : root.categoryAccentColor(appCard.modelData.category)
                                             }
                                         }
                                     }
 
-                                    QQC2.Button {
-                                        text: "30m"
-                                        flat: appCard.modelData.limitMinutes !== 30
-                                        highlighted: appCard.modelData.limitMinutes === 30
-                                        Layout.preferredHeight: 28
-                                        onClicked: {
-                                            if (root.trackerObj) {
-                                                root.trackerObj.setAppLimit(appCard.modelData.appId, 30);
-                                            }
-                                        }
-                                    }
+                                    // Daily Limit Pills (15m, 30m, 60m, ∞)
+                                    RowLayout {
+                                        spacing: 4
 
-                                    QQC2.Button {
-                                        text: "60m"
-                                        flat: appCard.modelData.limitMinutes !== 60
-                                        highlighted: appCard.modelData.limitMinutes === 60
-                                        Layout.preferredHeight: 28
-                                        onClicked: {
-                                            if (root.trackerObj) {
-                                                root.trackerObj.setAppLimit(appCard.modelData.appId, 60);
-                                            }
-                                        }
-                                    }
+                                        Repeater {
+                                            model: [
+                                                { label: "15m", mins: 15 },
+                                                { label: "30m", mins: 30 },
+                                                { label: "60m", mins: 60 },
+                                                { label: "∞", mins: 0 }
+                                            ]
 
-                                    QQC2.Button {
-                                        text: "Sin límite"
-                                        flat: appCard.modelData.limitMinutes !== 0
-                                        highlighted: appCard.modelData.limitMinutes === 0
-                                        Layout.preferredHeight: 28
-                                        onClicked: {
-                                            if (root.trackerObj) {
-                                                root.trackerObj.setAppLimit(appCard.modelData.appId, 0);
+                                            Rectangle {
+                                                required property var modelData
+                                                readonly property bool isSelected: appCard.modelData.limitMinutes === modelData.mins
+                                                height: 24
+                                                implicitWidth: 34
+                                                radius: 12
+                                                color: isSelected ? CachyTheme.accentColor : "transparent"
+                                                border.width: 1
+                                                border.color: isSelected ? CachyTheme.accentColor : CachyTheme.specularBorder
+
+                                                Text {
+                                                    anchors.centerIn: parent
+                                                    text: modelData.label
+                                                    font.pixelSize: 10
+                                                    font.weight: isSelected ? Font.Bold : Font.Medium
+                                                    color: isSelected ? "#FFFFFF" : CachyTheme.textSecondary
+                                                }
+
+                                                TapHandler {
+                                                    onTapped: {
+                                                        if (root.trackerObj) {
+                                                            root.trackerObj.setAppLimit(appCard.modelData.appId, modelData.mins);
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -621,5 +697,5 @@ Kirigami.ApplicationWindow {
                 }
             }
         }
-    }
+    ]
 }

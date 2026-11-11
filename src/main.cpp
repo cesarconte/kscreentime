@@ -14,6 +14,8 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
+#include <QQuickWindow>
+#include <QTimer>
 
 int main(int argc, char *argv[])
 {
@@ -29,6 +31,10 @@ int main(int argc, char *argv[])
     QCommandLineOption daemonOpt(QStringLiteral("daemon"),
                                  QStringLiteral("Run in background daemon mode tracking Wayland active window time."));
     parser.addOption(daemonOpt);
+    QCommandLineOption screenshotOpt(QStringLiteral("screenshot"),
+                                     QStringLiteral("Capture window screenshot and exit"),
+                                     QStringLiteral("path"));
+    parser.addOption(screenshotOpt);
     parser.process(app);
 
     const bool isDaemon = parser.isSet(daemonOpt);
@@ -39,7 +45,7 @@ int main(int argc, char *argv[])
                                  QStringLiteral("/Tracker"),
                                  QStringLiteral("org.cesar.kscreentime.Tracker"),
                                  bus);
-    if (existingIface.isValid()) {
+    if (!parser.isSet(screenshotOpt) && existingIface.isValid()) {
         if (!isDaemon) {
             existingIface.call(QStringLiteral("ShowWindow"));
         }
@@ -58,11 +64,23 @@ int main(int argc, char *argv[])
     tracker.setWindowVisible(!isDaemon);
 
     QQmlApplicationEngine engine;
+    engine.addImportPath(QStringLiteral("/home/cesar/.local/lib/qt6/qml"));
     engine.rootContext()->setContextProperty(QStringLiteral("Tracker"), &tracker);
     engine.load(QUrl(QStringLiteral("qrc:/org/cesar/kscreentime/qml/main.qml")));
 
     if (engine.rootObjects().isEmpty()) {
         return -1;
+    }
+
+    if (parser.isSet(screenshotOpt)) {
+        if (auto *win = qobject_cast<QQuickWindow *>(engine.rootObjects().first())) {
+            const QString outPath = parser.value(screenshotOpt);
+            QTimer::singleShot(350, win, [win, outPath, &app]() {
+                const QImage img = win->grabWindow();
+                img.save(outPath);
+                app.quit();
+            });
+        }
     }
 
     return app.exec();

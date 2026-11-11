@@ -204,6 +204,7 @@ private Q_SLOTS:
 
         ScreenTimeTracker tracker(tempDir.path());
         QQmlEngine engine;
+        engine.addImportPath(QStringLiteral("/home/cesar/.local/lib/qt6/qml"));
         engine.rootContext()->setContextProperty(QStringLiteral("Tracker"), &tracker);
 
         QQmlComponent comp(&engine, QUrl(QStringLiteral("qrc:/org/cesar/kscreentime/qml/main.qml")));
