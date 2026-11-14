@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
     app.setApplicationName(QStringLiteral("kscreentime"));
     app.setApplicationDisplayName(QStringLiteral("KScreenTime — Tiempo de Uso"));
     app.setOrganizationDomain(QStringLiteral("cesar.org"));
-    app.setWindowIcon(QIcon::fromTheme(QStringLiteral("preferences-system-time")));
+    app.setWindowIcon(QIcon::fromTheme(QStringLiteral("org.cesar.kscreentime"), QIcon::fromTheme(QStringLiteral("preferences-system-time"))));
 
     QCommandLineParser parser;
     parser.setApplicationDescription(QStringLiteral("Wayland Screen Time Tracker & Dashboard for KDE Plasma 6"));

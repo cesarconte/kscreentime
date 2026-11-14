@@ -5,7 +5,7 @@ After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=%h/.local/bin/kscreentime --daemon
+ExecStart=/usr/bin/kscreentime --daemon
 Restart=on-failure
 RestartSec=3
 
