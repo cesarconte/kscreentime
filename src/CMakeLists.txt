@@ -1,4 +1,10 @@
 add_library(kscreentime_core STATIC
+    appclassifier.cpp
+    appclassifier.h
+    screentimestore.cpp
+    screentimestore.h
+    kwinwindowlistener.cpp
+    kwinwindowlistener.h
     screentimetracker.cpp
     screentimetracker.h
 )

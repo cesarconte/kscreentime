@@ -1,13 +1,15 @@
 /*
-    SPDX-FileCopyrightText: 2026 Cesar
-    SPDX-License-Identifier: GPL-3.0-or-later
-*/
+ * SPDX-FileCopyrightText: 2026 Cesar
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
 
 #pragma once
 
-#include <QMap>
+#include "appclassifier.h"
+#include "kwinwindowlistener.h"
+#include "screentimestore.h"
+
 #include <QObject>
-#include <QSet>
 #include <QString>
 #include <QTimer>
 #include <QVariantList>
@@ -34,19 +36,19 @@ public:
     ~ScreenTimeTracker() override;
 
     QString storageFilePath() const;
-    QString selectedDate() const;
-    int todayTotalSeconds() const;
-    QString todayTotalFormatted() const;
-    QString vsAverageText() const;
-    QString currentActiveApp() const;
+    QString selectedDate() const { return m_selectedDate; }
+    int todayTotalSeconds() const { return m_store.todayTotalSeconds(m_selectedDate); }
+    QString todayTotalFormatted() const { return m_store.todayTotalFormatted(m_selectedDate); }
+    QString vsAverageText() const { return m_store.vsAverageText(m_selectedDate); }
+    QString currentActiveApp() const { return m_currentActiveApp; }
     QString currentActiveDisplayName() const;
-    QString currentActiveCaption() const;
-    bool windowVisible() const;
+    QString currentActiveCaption() const { return m_currentActiveCaption; }
+    bool windowVisible() const { return m_windowVisible; }
     void setWindowVisible(bool visible);
 
-    QVariantList appUsageList() const;
-    QVariantList weeklyChartData() const;
-    QVariantList categoryBreakdown() const;
+    QVariantList appUsageList() const { return m_store.appUsageList(m_selectedDate); }
+    QVariantList weeklyChartData() const { return m_store.weeklyChartData(m_selectedDate); }
+    QVariantList categoryBreakdown() const { return m_store.categoryBreakdown(m_selectedDate); }
 
     Q_INVOKABLE void recordActiveApp(const QString &appClass, const QString &caption = QString());
     Q_INVOKABLE void addUsageSeconds(const QString &dateStr, const QString &appId, int seconds);
@@ -58,12 +60,31 @@ public:
     bool startLiveTracking();
     void stopLiveTracking();
 
-    static QString classifyAppCategory(const QString &appId);
-    static QString formatDuration(int totalSeconds);
-    static QString displayNameForApp(const QString &appId);
-    static QString iconNameForApp(const QString &appId);
-    static QString iconNameForCategory(const QString &category);
-    static QString normalizeAppId(const QString &rawAppClass);
+    // Static forwarders for unit tests and backwards compatibility
+    static QString classifyAppCategory(const QString &appId)
+    {
+        return AppClassifier::classifyAppCategory(appId);
+    }
+    static QString formatDuration(int totalSeconds)
+    {
+        return AppClassifier::formatDuration(totalSeconds);
+    }
+    static QString displayNameForApp(const QString &appId)
+    {
+        return AppClassifier::displayNameForApp(appId);
+    }
+    static QString iconNameForApp(const QString &appId)
+    {
+        return AppClassifier::iconNameForApp(appId);
+    }
+    static QString iconNameForCategory(const QString &category)
+    {
+        return AppClassifier::iconNameForCategory(category);
+    }
+    static QString normalizeAppId(const QString &rawAppClass)
+    {
+        return AppClassifier::normalizeAppId(rawAppClass);
+    }
 
 public Q_SLOTS:
     Q_SCRIPTABLE void RecordActiveApp(const QString &appClass, const QString &caption = QString());
@@ -78,27 +99,14 @@ Q_SIGNALS:
     void appLimitExceeded(const QString &appId, int limitMinutes, int currentSeconds);
 
 private:
-    void loadFromDisk();
-    void saveToDisk() const;
-    void checkAndNotifyLimit(const QString &dateStr, const QString &appId);
-    void sendDesktopNotification(const QString &title, const QString &body) const;
-    bool isScreenLocked() const;
-
     QString m_storageDir;
     QString m_selectedDate;
     QString m_currentActiveApp;
     QString m_currentActiveCaption;
-    bool m_liveMode = false;
-    int m_kwinScriptId = -1;
     bool m_windowVisible = true;
     int m_ticksSinceSave = 0;
 
-    // dateStr ("YYYY-MM-DD") -> (appId -> seconds)
-    QMap<QString, QMap<QString, int>> m_dailyUsage;
-    // appId -> limitMinutes (<= 0 means no limit)
-    QMap<QString, int> m_appLimits;
-    // Set of "YYYY-MM-DD|appId" already notified in this session
-    QSet<QString> m_notifiedLimits;
-
+    ScreenTimeStore m_store;
+    KWinWindowListener m_listener;
     QTimer m_tickTimer;
 };

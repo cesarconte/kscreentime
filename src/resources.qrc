@@ -2,5 +2,9 @@
 <RCC version="1.0">
     <qresource prefix="/org/cesar/kscreentime">
         <file>qml/main.qml</file>
+        <file>qml/ScreenTimeSidebar.qml</file>
+        <file>qml/SummaryCardsRow.qml</file>
+        <file>qml/WeeklyActivityChart.qml</file>
+        <file>qml/AppUsageListCard.qml</file>
     </qresource>
 </RCC>
