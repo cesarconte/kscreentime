@@ -86,10 +86,6 @@ Rectangle {
                                 radius: 6
                                 color: CachyTheme.accentColor
                                 opacity: dayBarItem.modelData.isSelected ? 0.95 : 0.55
-
-                                Behavior on height {
-                                    NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
-                                }
                             }
 
                             TapHandler {

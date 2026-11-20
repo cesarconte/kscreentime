@@ -26,15 +26,19 @@ RowLayout {
 
     // Card 1: Daily Total & vs Average
     Rectangle {
+        id: card1
         Layout.fillWidth: true
+        Layout.fillHeight: true
         Layout.preferredWidth: 1
-        Layout.minimumHeight: 118
+        implicitHeight: Math.max(136, card1Col.implicitHeight + 28)
         radius: 16
         color: CachyTheme.cardBackground
         border.width: 1
         border.color: CachyTheme.specularBorder
+        clip: true
 
         ColumnLayout {
+            id: card1Col
             anchors.fill: parent
             anchors.margins: 14
             spacing: 4
@@ -57,6 +61,8 @@ RowLayout {
                 elide: Text.ElideRight
             }
 
+            Item { Layout.fillHeight: true }
+
             Text {
                 Layout.fillWidth: true
                 text: root.trackerObj ? root.trackerObj.vsAverageText : ""
@@ -70,15 +76,19 @@ RowLayout {
 
     // Card 2: Active KWin Wayland Window
     Rectangle {
+        id: card2
         Layout.fillWidth: true
+        Layout.fillHeight: true
         Layout.preferredWidth: 1
-        Layout.minimumHeight: 118
+        implicitHeight: Math.max(136, card2Col.implicitHeight + 28)
         radius: 16
         color: CachyTheme.cardBackground
         border.width: 1
         border.color: CachyTheme.specularBorder
+        clip: true
 
         ColumnLayout {
+            id: card2Col
             anchors.fill: parent
             anchors.margins: 14
             spacing: 4
@@ -113,6 +123,8 @@ RowLayout {
                 elide: Text.ElideRight
             }
 
+            Item { Layout.fillHeight: true }
+
             Text {
                 Layout.fillWidth: true
                 text: {
@@ -129,17 +141,21 @@ RowLayout {
         }
     }
 
-    // Card 3: Categories Breakdown
+    // Card 3: Categories Breakdown (macOS Golden Gate Style)
     Rectangle {
+        id: card3
         Layout.fillWidth: true
-        Layout.preferredWidth: 1.2
-        Layout.minimumHeight: 118
+        Layout.fillHeight: true
+        Layout.preferredWidth: 1.35
+        implicitHeight: Math.max(136, card3Col.implicitHeight + 28)
         radius: 16
         color: CachyTheme.cardBackground
         border.width: 1
         border.color: CachyTheme.specularBorder
+        clip: true
 
         ColumnLayout {
+            id: card3Col
             anchors.fill: parent
             anchors.margins: 14
             spacing: 6
@@ -151,6 +167,33 @@ RowLayout {
                 font.pixelSize: 11
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
+            }
+
+            // macOS Screen Time Segmented Proportional Category Bar
+            Rectangle {
+                Layout.fillWidth: true
+                height: 6
+                radius: 3
+                color: CachyTheme.surfacePill
+                clip: true
+                visible: Boolean(root.trackerObj && root.trackerObj.categoryBreakdown.length > 0)
+
+                Row {
+                    anchors.fill: parent
+                    spacing: 1
+
+                    Repeater {
+                        model: root.trackerObj ? root.trackerObj.categoryBreakdown : []
+
+                        Rectangle {
+                            id: seg
+                            required property var modelData
+                            height: parent.height
+                            width: Math.max(3, Math.round(parent.width * seg.modelData.ratio))
+                            color: root.categoryAccentColor(seg.modelData.category)
+                        }
+                    }
+                }
             }
 
             Text {
@@ -165,8 +208,7 @@ RowLayout {
             Flow {
                 visible: Boolean(root.trackerObj && root.trackerObj.categoryBreakdown.length > 0)
                 Layout.fillWidth: true
-                Layout.fillHeight: true
-                spacing: 6
+                spacing: 4
 
                 Repeater {
                     model: root.trackerObj ? root.trackerObj.categoryBreakdown : []
@@ -174,35 +216,44 @@ RowLayout {
                     Rectangle {
                         id: catBadge
                         required property var modelData
-                        height: 24
-                        implicitWidth: catRow.implicitWidth + 14
-                        radius: 12
-                        color: CachyTheme.surfacePill
+                        height: 22
+                        implicitWidth: catRow.implicitWidth + 12
+                        radius: 11
+                        color: CachyTheme.withAlpha(root.categoryAccentColor(catBadge.modelData.category), CachyTheme.isDark ? 0.20 : 0.12)
                         border.width: 1
-                        border.color: root.categoryAccentColor(catBadge.modelData.category)
+                        border.color: CachyTheme.withAlpha(root.categoryAccentColor(catBadge.modelData.category), 0.45)
 
                         RowLayout {
                             id: catRow
                             anchors.centerIn: parent
                             spacing: 4
 
+                            Rectangle {
+                                Layout.preferredWidth: 6
+                                Layout.preferredHeight: 6
+                                radius: 3
+                                color: root.categoryAccentColor(catBadge.modelData.category)
+                            }
+
                             Text {
                                 text: catBadge.modelData.category
                                 color: CachyTheme.textPrimary
-                                font.pixelSize: 11
+                                font.pixelSize: 10
                                 font.weight: Font.DemiBold
                             }
 
                             Text {
                                 text: catBadge.modelData.formattedDuration
                                 color: root.categoryAccentColor(catBadge.modelData.category)
-                                font.pixelSize: 11
+                                font.pixelSize: 10
                                 font.weight: Font.Bold
                             }
                         }
                     }
                 }
             }
+
+            Item { Layout.fillHeight: true }
         }
     }
 }
