@@ -34,7 +34,7 @@ ColumnLayout {
     CachySidebarItem {
         Layout.fillWidth: true
         text: "App & Website Activity"
-        iconGlyph: "📊"
+        iconName: "office-chart-bar"
         iconColor: "#007AFF"
         squircleIconBadge: true
         selected: root.activeSection === "activity"
@@ -44,7 +44,7 @@ ColumnLayout {
     CachySidebarItem {
         Layout.fillWidth: true
         text: "Active Window (KWin)"
-        iconGlyph: "🪟"
+        iconName: "window"
         iconColor: "#34C759"
         squircleIconBadge: true
         selected: root.activeSection === "live"
@@ -54,7 +54,7 @@ ColumnLayout {
     CachySidebarItem {
         Layout.fillWidth: true
         text: "Categories Breakdown"
-        iconGlyph: "🏷"
+        iconName: "tag"
         iconColor: "#AF52DE"
         squircleIconBadge: true
         selected: root.activeSection === "categories"
@@ -74,7 +74,7 @@ ColumnLayout {
     CachySidebarItem {
         Layout.fillWidth: true
         text: "App Limits"
-        iconGlyph: "⏳"
+        iconName: "chronometer"
         iconColor: "#FF9500"
         squircleIconBadge: true
         badgeText: root.trackerObj ? String(root.trackerObj.appUsageList.length) : "0"

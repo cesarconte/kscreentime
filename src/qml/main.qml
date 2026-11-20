@@ -26,11 +26,10 @@ CachyWindow {
     showTrafficLights: true
     showTitleBarDivider: true
     showWindowFrame: true
-    sidebarVisible: root.showSidebar
-    sidebarWidth: 232
+    sidebarVisible: true
+    sidebarWidthExpanded: 232
     cornerRadius: CachyTheme.radiusWindow
 
-    property bool showSidebar: true
     property string activeSection: "activity"
     readonly property var trackerObj: typeof Tracker !== "undefined" ? Tracker : null
 
@@ -71,10 +70,9 @@ CachyWindow {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 8
 
-            CachyToolbarButton {
-                text: "☰"
-                tooltipText: "Mostrar/ocultar barra lateral"
-                onClicked: root.showSidebar = !root.showSidebar
+            CachySidebarToggleButton {
+                targetWindow: root
+                visible: true
             }
 
             Text {
@@ -93,7 +91,8 @@ CachyWindow {
 
             CachyToolbarButton {
                 text: "Reiniciar"
-                implicitWidth: 74
+                iconName: "edit-clear-history"
+                implicitWidth: 84
                 enabled: Boolean(root.trackerObj && root.trackerObj.todayTotalSeconds > 0)
                 tooltipText: "Reiniciar historial de tiempo de uso"
                 onClicked: {

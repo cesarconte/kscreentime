@@ -7,7 +7,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
-import org.kde.kirigami as Kirigami
 import CachyOS.UI
 
 Rectangle {
@@ -77,10 +76,12 @@ Rectangle {
                     anchors.rightMargin: 12
                     spacing: 10
 
-                    Kirigami.Icon {
-                        source: appCard.modelData.iconName
+                    CachyIcon {
+                        name: appCard.modelData.iconName
+                        size: 28
                         Layout.preferredWidth: 28
                         Layout.preferredHeight: 28
+                        colored: false
                     }
 
                     ColumnLayout {
