@@ -15,7 +15,7 @@ RowLayout {
     required property var trackerObj
 
     function categoryAccentColor(cat: string): color {
-        if (cat === "Desarrollo") return "#007AFF";
+        if (cat === "Desarrollo") return "#0A84FF";
         if (cat === "Navegación") return "#32ADE6";
         if (cat === "Multimedia") return "#AF52DE";
         if (cat === "Comunicación") return "#34C759";
@@ -31,10 +31,10 @@ RowLayout {
         Layout.fillHeight: true
         Layout.preferredWidth: 1
         implicitHeight: Math.max(136, card1Col.implicitHeight + 28)
-        radius: 16
-        color: CachyTheme.cardBackground
+        radius: 14
+        color: CachyPalette.cardBackground
         border.width: 1
-        border.color: CachyTheme.specularBorder
+        border.color: CachyPalette.specularBorder
         clip: true
 
         ColumnLayout {
@@ -45,8 +45,8 @@ RowLayout {
 
             Text {
                 Layout.fillWidth: true
-                text: "Tiempo de Uso (" + (root.trackerObj ? root.trackerObj.selectedDate : "Hoy") + ")"
-                color: CachyTheme.textMuted
+                text: "Tiempo de uso (" + (root.trackerObj ? root.trackerObj.selectedDate : "Hoy") + ")"
+                color: CachyPalette.textMuted
                 font.pixelSize: 11
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
@@ -55,7 +55,7 @@ RowLayout {
             Text {
                 Layout.fillWidth: true
                 text: root.trackerObj ? root.trackerObj.todayTotalFormatted : "0m"
-                color: CachyTheme.textPrimary
+                color: CachyPalette.text
                 font.pixelSize: 28
                 font.weight: Font.Bold
                 elide: Text.ElideRight
@@ -81,10 +81,10 @@ RowLayout {
         Layout.fillHeight: true
         Layout.preferredWidth: 1
         implicitHeight: Math.max(136, card2Col.implicitHeight + 28)
-        radius: 16
-        color: CachyTheme.cardBackground
+        radius: 14
+        color: CachyPalette.cardBackground
         border.width: 1
-        border.color: CachyTheme.specularBorder
+        border.color: CachyPalette.specularBorder
         clip: true
 
         ColumnLayout {
@@ -101,13 +101,13 @@ RowLayout {
                     Layout.preferredWidth: 8
                     Layout.preferredHeight: 8
                     radius: 4
-                    color: (root.trackerObj && root.trackerObj.currentActiveApp.length > 0) ? "#34C759" : CachyTheme.textMuted
+                    color: (root.trackerObj && root.trackerObj.currentActiveApp.length > 0) ? "#34C759" : CachyPalette.textMuted
                 }
 
                 Text {
                     Layout.fillWidth: true
-                    text: "Ventana Activa (Wayland / KWin)"
-                    color: CachyTheme.textMuted
+                    text: "Ventana activa (Wayland / KWin)"
+                    color: CachyPalette.textMuted
                     font.pixelSize: 11
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight
@@ -117,7 +117,7 @@ RowLayout {
             Text {
                 Layout.fillWidth: true
                 text: root.trackerObj ? root.trackerObj.currentActiveDisplayName : "Escritorio Wayland"
-                color: CachyTheme.textPrimary
+                color: CachyPalette.text
                 font.pixelSize: 18
                 font.weight: Font.Bold
                 elide: Text.ElideRight
@@ -134,7 +134,7 @@ RowLayout {
                     if (app.length === 0) return "Esperando foco de ventana en KWin…";
                     return cap.length > 0 ? (app + " — " + cap) : app;
                 }
-                color: CachyTheme.textSecondary
+                color: CachyPalette.textSecondary
                 font.pixelSize: 11
                 elide: Text.ElideRight
             }
@@ -148,10 +148,10 @@ RowLayout {
         Layout.fillHeight: true
         Layout.preferredWidth: 1.35
         implicitHeight: Math.max(136, card3Col.implicitHeight + 28)
-        radius: 16
-        color: CachyTheme.cardBackground
+        radius: 14
+        color: CachyPalette.cardBackground
         border.width: 1
-        border.color: CachyTheme.specularBorder
+        border.color: CachyPalette.specularBorder
         clip: true
 
         ColumnLayout {
@@ -162,8 +162,8 @@ RowLayout {
 
             Text {
                 Layout.fillWidth: true
-                text: "Desglose por Categorías"
-                color: CachyTheme.textMuted
+                text: "Desglose por categorías"
+                color: CachyPalette.textMuted
                 font.pixelSize: 11
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
@@ -174,7 +174,7 @@ RowLayout {
                 Layout.fillWidth: true
                 height: 6
                 radius: 3
-                color: CachyTheme.surfacePill
+                color: CachyPalette.surfacePill
                 clip: true
                 visible: Boolean(root.trackerObj && root.trackerObj.categoryBreakdown.length > 0)
 
@@ -199,7 +199,7 @@ RowLayout {
             Text {
                 visible: !root.trackerObj || root.trackerObj.categoryBreakdown.length === 0
                 text: "Sin actividad registrada en esta fecha"
-                color: CachyTheme.textSecondary
+                color: CachyPalette.textSecondary
                 font.pixelSize: 11
                 Layout.fillWidth: true
                 elide: Text.ElideRight
@@ -219,9 +219,9 @@ RowLayout {
                         height: 22
                         implicitWidth: catRow.implicitWidth + 12
                         radius: 11
-                        color: CachyTheme.withAlpha(root.categoryAccentColor(catBadge.modelData.category), CachyTheme.isDark ? 0.20 : 0.12)
+                        color: Qt.alpha(root.categoryAccentColor(catBadge.modelData.category), CachyPalette.isDark ? 0.20 : 0.12)
                         border.width: 1
-                        border.color: CachyTheme.withAlpha(root.categoryAccentColor(catBadge.modelData.category), 0.45)
+                        border.color: Qt.alpha(root.categoryAccentColor(catBadge.modelData.category), 0.45)
 
                         RowLayout {
                             id: catRow
@@ -237,7 +237,7 @@ RowLayout {
 
                             Text {
                                 text: catBadge.modelData.category
-                                color: CachyTheme.textPrimary
+                                color: CachyPalette.text
                                 font.pixelSize: 10
                                 font.weight: Font.DemiBold
                             }

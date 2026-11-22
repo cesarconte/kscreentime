@@ -13,9 +13,10 @@ Rectangle {
     id: root
 
     required property var trackerObj
+    property string filterQuery: ""
 
     function categoryAccentColor(cat: string): color {
-        if (cat === "Desarrollo") return "#007AFF";
+        if (cat === "Desarrollo") return "#0A84FF";
         if (cat === "Navegación") return "#32ADE6";
         if (cat === "Multimedia") return "#AF52DE";
         if (cat === "Comunicación") return "#34C759";
@@ -24,10 +25,10 @@ Rectangle {
 
     Layout.fillWidth: true
     implicitHeight: appListColumn.implicitHeight + 28
-    radius: 16
-    color: CachyTheme.cardBackground
+    radius: 14
+    color: CachyPalette.cardBackground
     border.width: 1
-    border.color: CachyTheme.specularBorder
+    border.color: CachyPalette.specularBorder
 
     ColumnLayout {
         id: appListColumn
@@ -35,13 +36,25 @@ Rectangle {
         anchors.margins: 14
         spacing: 10
 
-        Text {
+        RowLayout {
             Layout.fillWidth: true
-            text: "Uso Real por Aplicación y Límites Diarios"
-            color: CachyTheme.textPrimary
-            font.pixelSize: 14
-            font.weight: Font.Bold
-            elide: Text.ElideRight
+            spacing: 8
+
+            Text {
+                text: "Uso por aplicación y límites diarios"
+                color: CachyPalette.text
+                font.pixelSize: 13
+                font.weight: Font.Bold
+            }
+
+            Item { Layout.fillWidth: true }
+
+            CachySearchField {
+                id: searchBox
+                Layout.preferredWidth: 180
+                placeholderText: "Buscar app…"
+                onTextChanged: root.filterQuery = text.toLowerCase().trim()
+            }
         }
 
         Text {
@@ -49,38 +62,46 @@ Rectangle {
             Layout.fillWidth: true
             wrapMode: Text.WordWrap
             text: "No hay actividad de aplicaciones registrada en esta fecha."
-            color: CachyTheme.textSecondary
+            color: CachyPalette.textSecondary
             font.pixelSize: 12
         }
 
         Repeater {
-            model: root.trackerObj ? root.trackerObj.appUsageList : []
+            model: {
+                if (!root.trackerObj || !root.trackerObj.appUsageList) return [];
+                const list = root.trackerObj.appUsageList;
+                if (!root.filterQuery) return list;
+                return list.filter(function(item) {
+                    return item.displayName.toLowerCase().indexOf(root.filterQuery) !== -1 ||
+                           item.category.toLowerCase().indexOf(root.filterQuery) !== -1;
+                });
+            }
 
             Rectangle {
                 id: appCard
                 required property var modelData
                 Layout.fillWidth: true
-                implicitHeight: 62
-                radius: 12
+                implicitHeight: 60
+                radius: 10
                 color: appCard.modelData.limitExceeded
-                    ? "#1FFF3B30"
-                    : CachyTheme.surfacePill
+                    ? (CachyPalette.isDark ? "#33FF3B30" : "#1AFF3B30")
+                    : CachyPalette.surfacePill
                 border.width: 1
                 border.color: appCard.modelData.limitExceeded
                     ? "#FF3B30"
-                    : CachyTheme.specularBorder
+                    : CachyPalette.specularBorder
 
                 RowLayout {
                     anchors.fill: parent
                     anchors.leftMargin: 12
                     anchors.rightMargin: 12
-                    spacing: 10
+                    spacing: 12
 
                     CachyIcon {
                         name: appCard.modelData.iconName
-                        size: 28
-                        Layout.preferredWidth: 28
-                        Layout.preferredHeight: 28
+                        size: 26
+                        Layout.preferredWidth: 26
+                        Layout.preferredHeight: 26
                         colored: false
                     }
 
@@ -95,9 +116,9 @@ Rectangle {
                             Text {
                                 Layout.fillWidth: true
                                 text: appCard.modelData.displayName
-                                color: CachyTheme.textPrimary
+                                color: CachyPalette.text
                                 font.pixelSize: 13
-                                font.weight: Font.Bold
+                                font.weight: Font.DemiBold
                                 elide: Text.ElideRight
                             }
 
@@ -118,14 +139,14 @@ Rectangle {
 
                         Rectangle {
                             Layout.fillWidth: true
-                            Layout.preferredHeight: 6
-                            radius: 3
-                            color: CachyTheme.withAlpha(CachyTheme.textMuted, 0.18)
+                            Layout.preferredHeight: 5
+                            radius: 2.5
+                            color: Qt.alpha(CachyPalette.textMuted, 0.20)
 
                             Rectangle {
-                                width: Math.max(6, parent.width * Math.min(1.0, appCard.modelData.ratio))
+                                width: Math.max(5, parent.width * Math.min(1.0, appCard.modelData.ratio))
                                 height: parent.height
-                                radius: 3
+                                radius: 2.5
                                 color: appCard.modelData.limitExceeded
                                     ? "#FF3B30"
                                     : root.categoryAccentColor(appCard.modelData.category)
@@ -133,7 +154,7 @@ Rectangle {
                         }
                     }
 
-                    // Daily Limit Pills (15m, 30m, 60m, ∞)
+                    // Daily Limit Pills (15m, 30m, 1h, ∞)
                     RowLayout {
                         spacing: 4
 
@@ -141,7 +162,7 @@ Rectangle {
                             model: [
                                 { label: "15m", mins: 15 },
                                 { label: "30m", mins: 30 },
-                                { label: "60m", mins: 60 },
+                                { label: "1h", mins: 60 },
                                 { label: "∞", mins: 0 }
                             ]
 
@@ -154,14 +175,18 @@ Rectangle {
                                 radius: 12
                                 color: isSelected ? CachyTheme.accentColor : "transparent"
                                 border.width: 1
-                                border.color: isSelected ? CachyTheme.accentColor : CachyTheme.specularBorder
+                                border.color: isSelected ? CachyTheme.accentColor : CachyPalette.specularBorder
 
                                 Text {
                                     anchors.centerIn: parent
                                     text: limitPill.modelData.label
                                     font.pixelSize: 10
-                                    font.weight: limitPill.isSelected ? Font.Bold : Font.Medium
-                                    color: limitPill.isSelected ? "#FFFFFF" : CachyTheme.textSecondary
+                                    font.weight: limitPill.isSelected ? Font.Bold : Font.Normal
+                                    color: limitPill.isSelected ? "#FFFFFF" : CachyPalette.textSecondary
+                                }
+
+                                HoverHandler {
+                                    cursorShape: Qt.PointingHandCursor
                                 }
 
                                 TapHandler {

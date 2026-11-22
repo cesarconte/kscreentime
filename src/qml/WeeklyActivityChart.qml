@@ -15,94 +15,180 @@ Rectangle {
     required property var trackerObj
 
     Layout.fillWidth: true
-    Layout.preferredHeight: 196
-    radius: 16
-    color: CachyTheme.cardBackground
+    Layout.preferredHeight: 204
+    radius: 14
+    color: CachyPalette.cardBackground
     border.width: 1
-    border.color: CachyTheme.specularBorder
+    border.color: CachyPalette.specularBorder
 
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 14
-        spacing: 10
-
-        Text {
-            Layout.fillWidth: true
-            text: "Actividad de los Últimos 7 Días (haz clic en un día para inspeccionar)"
-            color: CachyTheme.textPrimary
-            font.pixelSize: 13
-            font.weight: Font.Bold
-            elide: Text.ElideRight
-        }
+        spacing: 8
 
         RowLayout {
             Layout.fillWidth: true
+
+            Text {
+                text: "Actividad de la semana"
+                color: CachyPalette.text
+                font.pixelSize: 13
+                font.weight: Font.Bold
+            }
+
+            Item { Layout.fillWidth: true }
+
+            Text {
+                text: "Haz clic en un día para filtrar el detalle"
+                color: CachyPalette.textMuted
+                font.pixelSize: 11
+            }
+        }
+
+        Item {
+            Layout.fillWidth: true
             Layout.fillHeight: true
-            spacing: 10
 
-            Repeater {
-                model: root.trackerObj ? root.trackerObj.weeklyChartData : []
+            // Subtle background horizontal grid lines (0%, 50%, 100%)
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: axisCol.left
+                anchors.rightMargin: 8
+                anchors.top: parent.top
+                anchors.topMargin: 18
+                height: 1
+                color: CachyPalette.separator
+                opacity: 0.4
+            }
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: axisCol.left
+                anchors.rightMargin: 8
+                anchors.verticalCenter: parent.verticalCenter
+                height: 1
+                color: CachyPalette.separator
+                opacity: 0.3
+            }
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: axisCol.left
+                anchors.rightMargin: 8
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 22
+                height: 1
+                color: CachyPalette.separator
+                opacity: 0.5
+            }
 
-                Item {
-                    id: dayBarItem
-                    required property var modelData
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
+            // Right Y-Axis labels
+            ColumnLayout {
+                id: axisCol
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 18
+                width: 32
+                spacing: 0
 
-                    ColumnLayout {
-                        anchors.fill: parent
-                        spacing: 4
+                Text {
+                    text: "Max"
+                    color: CachyPalette.textMuted
+                    font.pixelSize: 9
+                    Layout.alignment: Qt.AlignRight | Qt.AlignTop
+                }
+                Item { Layout.fillHeight: true }
+                Text {
+                    text: "Med"
+                    color: CachyPalette.textMuted
+                    font.pixelSize: 9
+                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                }
+                Item { Layout.fillHeight: true }
+                Text {
+                    text: "0"
+                    color: CachyPalette.textMuted
+                    font.pixelSize: 9
+                    Layout.alignment: Qt.AlignRight | Qt.AlignBottom
+                }
+            }
 
-                        Text {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: dayBarItem.modelData.formattedDuration
-                            color: dayBarItem.modelData.isSelected ? CachyTheme.accentColor : CachyTheme.textSecondary
-                            font.pixelSize: 10
-                            font.weight: dayBarItem.modelData.isSelected ? Font.Bold : Font.Normal
-                        }
+            // Days Bars Row
+            RowLayout {
+                anchors.left: parent.left
+                anchors.right: axisCol.left
+                anchors.rightMargin: 8
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                spacing: 12
 
-                        Rectangle {
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            Layout.leftMargin: 6
-                            Layout.rightMargin: 6
-                            radius: 8
-                            color: dayBarItem.modelData.isSelected
-                                ? CachyTheme.withAlpha(CachyTheme.accentColor, 0.14)
-                                : CachyTheme.surfacePill
-                            border.width: 1
-                            border.color: dayBarItem.modelData.isSelected
-                                ? CachyTheme.accentColor
-                                : CachyTheme.specularBorder
+                Repeater {
+                    model: root.trackerObj ? root.trackerObj.weeklyChartData : []
 
-                            Rectangle {
-                                anchors.left: parent.left
-                                anchors.right: parent.right
-                                anchors.bottom: parent.bottom
-                                anchors.margins: 3
-                                height: dayBarItem.modelData.totalSeconds > 0
-                                    ? Math.max(6, (parent.height - 6) * dayBarItem.modelData.ratio)
-                                    : 0
-                                radius: 6
-                                color: CachyTheme.accentColor
-                                opacity: dayBarItem.modelData.isSelected ? 0.95 : 0.55
+                    Item {
+                        id: dayBarItem
+                        required property var modelData
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            spacing: 4
+
+                            Text {
+                                Layout.alignment: Qt.AlignHCenter
+                                text: dayBarItem.modelData.formattedDuration
+                                color: dayBarItem.modelData.isSelected ? CachyTheme.accentColor : CachyPalette.textSecondary
+                                font.pixelSize: 10
+                                font.weight: dayBarItem.modelData.isSelected ? Font.Bold : Font.Normal
                             }
 
-                            TapHandler {
-                                onTapped: {
-                                    if (root.trackerObj) {
-                                        root.trackerObj.selectDate(dayBarItem.modelData.date);
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                Layout.leftMargin: 8
+                                Layout.rightMargin: 8
+                                radius: 8
+                                color: dayBarItem.modelData.isSelected
+                                    ? Qt.alpha(CachyTheme.accentColor, 0.16)
+                                    : CachyPalette.surfacePill
+                                border.width: 1
+                                border.color: dayBarItem.modelData.isSelected
+                                    ? CachyTheme.accentColor
+                                    : CachyPalette.specularBorder
+
+                                Rectangle {
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    anchors.bottom: parent.bottom
+                                    anchors.margins: 3
+                                    height: dayBarItem.modelData.totalSeconds > 0
+                                        ? Math.max(6, (parent.height - 6) * dayBarItem.modelData.ratio)
+                                        : 0
+                                    radius: 6
+                                    color: CachyTheme.accentColor
+                                    opacity: dayBarItem.modelData.isSelected ? 0.95 : 0.60
+                                }
+
+                                HoverHandler {
+                                    cursorShape: Qt.PointingHandCursor
+                                }
+
+                                TapHandler {
+                                    onTapped: {
+                                        if (root.trackerObj) {
+                                            root.trackerObj.selectDate(dayBarItem.modelData.date);
+                                        }
                                     }
                                 }
                             }
-                        }
 
-                        Text {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: dayBarItem.modelData.dayLabel
-                            color: dayBarItem.modelData.isSelected ? CachyTheme.accentColor : CachyTheme.textSecondary
-                            font.pixelSize: 11
-                            font.weight: dayBarItem.modelData.isSelected ? Font.Bold : Font.Normal
+                            Text {
+                                Layout.alignment: Qt.AlignHCenter
+                                text: dayBarItem.modelData.dayLabel
+                                color: dayBarItem.modelData.isSelected ? CachyTheme.accentColor : CachyPalette.textSecondary
+                                font.pixelSize: 11
+                                font.weight: dayBarItem.modelData.isSelected ? Font.Bold : Font.Normal
+                            }
                         }
                     }
                 }

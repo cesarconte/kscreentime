@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * Screen Time — KScreenTime.
- * Diseño Golden Gate / Liquid Glass (CachyOS.UI).
+ * Diseño macOS Golden Gate / Liquid Glass (CachyOS.UI).
  */
 
 pragma ComponentBehavior: Bound
@@ -16,19 +16,20 @@ import CachyOS.UI
 CachyWindow {
     id: root
 
-    title: "Screen Time — KScreenTime"
+    title: "Tiempo de uso — KScreenTime"
     width: 980
     height: 700
-    minimumWidth: 800
+    minimumWidth: 820
     minimumHeight: 560
     visible: root.trackerObj ? root.trackerObj.windowVisible : true
 
     showTrafficLights: true
-    showTitleBarDivider: true
+    showTitleBarDivider: false
     showWindowFrame: true
     sidebarVisible: true
-    sidebarWidthExpanded: 232
+    sidebarWidthExpanded: 240
     cornerRadius: CachyTheme.radiusWindow
+    contentBackground: CachyPalette.contentBackground
 
     property string activeSection: "activity"
     readonly property var trackerObj: typeof Tracker !== "undefined" ? Tracker : null
@@ -79,7 +80,25 @@ CachyWindow {
                 text: "Fecha: " + (root.trackerObj ? root.trackerObj.selectedDate : "Hoy")
                 font.pixelSize: 12
                 font.weight: Font.DemiBold
-                color: CachyTheme.textSecondary
+                color: CachyPalette.textSecondary
+            }
+        }
+    ]
+
+    headerCenter: [
+        RowLayout {
+            anchors.centerIn: parent
+            visible: root.activeSection === "activity"
+
+            CachySegmentedControl {
+                model: ["Semana", "Día"]
+                currentIndex: (root.trackerObj && root.trackerObj.chartViewMode === "daily") ? 1 : 0
+                accentSelected: true
+                onCurrentIndexChanged: {
+                    if (root.trackerObj) {
+                        root.trackerObj.setChartViewMode(currentIndex === 1 ? "daily" : "weekly");
+                    }
+                }
             }
         }
     ]
@@ -89,12 +108,14 @@ CachyWindow {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 6
 
-            CachyToolbarButton {
+            CachyButton {
                 text: "Reiniciar"
-                iconName: "edit-clear-history"
-                implicitWidth: 84
+                iconName: "refresh"
+                pillStyle: true
                 enabled: Boolean(root.trackerObj && root.trackerObj.todayTotalSeconds > 0)
-                tooltipText: "Reiniciar historial de tiempo de uso"
+                QQC2.ToolTip.visible: hovered
+                QQC2.ToolTip.text: "Reiniciar historial de tiempo de uso"
+                QQC2.ToolTip.delay: 450
                 onClicked: {
                     if (root.trackerObj) {
                         root.trackerObj.clearAllData();
@@ -105,7 +126,7 @@ CachyWindow {
     ]
 
     // =========================================================================
-    // 3. MAIN SCROLLABLE DASHBOARD
+    // 3. MAIN SCROLLABLE CONTENT (MULTIPLE GOLDEN GATE PANES)
     // =========================================================================
     contentData: [
         QQC2.ScrollView {
@@ -115,29 +136,73 @@ CachyWindow {
             QQC2.ScrollBar.horizontal.policy: QQC2.ScrollBar.AlwaysOff
             clip: true
 
+            Item {
+                width: mainScroll.availableWidth
+                implicitHeight: contentLoader.implicitHeight + 32
+
+                Loader {
+                    id: contentLoader
+                    width: parent.width - 32
+                    x: 16
+                    y: 16
+                    sourceComponent: {
+                        if (root.activeSection === "downtime") return downtimeComp;
+                        if (root.activeSection === "limits") return limitsComp;
+                        if (root.activeSection === "alwaysAllowed") return alwaysAllowedComp;
+                        if (root.activeSection === "live") return liveComp;
+                        return activityComp;
+                    }
+                }
+            }
+        },
+
+        Component {
+            id: activityComp
             ColumnLayout {
-                width: mainScroll.availableWidth - 32
-                x: 16
-                y: 16
                 spacing: 14
 
-                // Top Row: 3 Summary Cards
                 SummaryCardsRow {
                     Layout.fillWidth: true
                     trackerObj: root.trackerObj
                 }
 
-                // Middle Card: 7-Day Activity Chart
                 WeeklyActivityChart {
                     Layout.fillWidth: true
                     trackerObj: root.trackerObj
                 }
 
-                // Bottom Card: App Usage List & Limits
                 AppUsageListCard {
                     Layout.fillWidth: true
                     trackerObj: root.trackerObj
                 }
+            }
+        },
+
+        Component {
+            id: downtimeComp
+            DowntimePane {
+                trackerObj: root.trackerObj
+            }
+        },
+
+        Component {
+            id: limitsComp
+            AppLimitsPane {
+                trackerObj: root.trackerObj
+            }
+        },
+
+        Component {
+            id: alwaysAllowedComp
+            AlwaysAllowedPane {
+                trackerObj: root.trackerObj
+            }
+        },
+
+        Component {
+            id: liveComp
+            LiveWindowPane {
+                trackerObj: root.trackerObj
             }
         }
     ]

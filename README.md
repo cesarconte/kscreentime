@@ -23,10 +23,10 @@
 ## Compilación e instalación
 
 ```bash
-cmake -B build -S . -DCMAKE_INSTALL_PREFIX=$HOME/.local -DBUILD_TESTING=ON
+cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_TESTING=ON
 cmake --build build -j$(nproc)
 ctest --test-dir build --output-on-failure
-cmake --install build
+sudo -n cmake --install build --prefix /usr
 kbuildsycoca6 >/dev/null 2>&1
 ```
 
@@ -35,7 +35,7 @@ kbuildsycoca6 >/dev/null 2>&1
 Ejecuta la aplicación desde el lanzador de aplicaciones de KDE (**KScreenTime (Tiempo de Uso)**) o desde terminal:
 
 ```bash
-~/.local/bin/kscreentime
+/usr/bin/kscreentime
 ```
 
 Los datos se guardan automáticamente en `~/.local/share/kscreentime/usage.json`.

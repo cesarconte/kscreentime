@@ -6,5 +6,9 @@
         <file>qml/SummaryCardsRow.qml</file>
         <file>qml/WeeklyActivityChart.qml</file>
         <file>qml/AppUsageListCard.qml</file>
+        <file>qml/DowntimePane.qml</file>
+        <file>qml/AppLimitsPane.qml</file>
+        <file>qml/AlwaysAllowedPane.qml</file>
+        <file>qml/LiveWindowPane.qml</file>
     </qresource>
 </RCC>

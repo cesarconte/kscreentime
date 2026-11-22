@@ -29,6 +29,14 @@ class ScreenTimeTracker : public QObject
     Q_PROPERTY(QVariantList appUsageList READ appUsageList NOTIFY dataChanged)
     Q_PROPERTY(QVariantList weeklyChartData READ weeklyChartData NOTIFY dataChanged)
     Q_PROPERTY(QVariantList categoryBreakdown READ categoryBreakdown NOTIFY dataChanged)
+    Q_PROPERTY(QVariantList allLimitsList READ allLimitsList NOTIFY dataChanged)
+    Q_PROPERTY(bool downtimeEnabled READ downtimeEnabled WRITE setDowntimeEnabled NOTIFY dataChanged)
+    Q_PROPERTY(QString downtimeStart READ downtimeStart WRITE setDowntimeStart NOTIFY dataChanged)
+    Q_PROPERTY(QString downtimeEnd READ downtimeEnd WRITE setDowntimeEnd NOTIFY dataChanged)
+    Q_PROPERTY(bool downtimeBlockAtLimit READ downtimeBlockAtLimit WRITE setDowntimeBlockAtLimit NOTIFY dataChanged)
+    Q_PROPERTY(bool isDowntimeActive READ isDowntimeActive NOTIFY dataChanged)
+    Q_PROPERTY(QStringList alwaysAllowedApps READ alwaysAllowedApps NOTIFY dataChanged)
+    Q_PROPERTY(QString chartViewMode READ chartViewMode WRITE setChartViewMode NOTIFY chartViewModeChanged)
     Q_PROPERTY(bool windowVisible READ windowVisible WRITE setWindowVisible NOTIFY windowVisibleChanged)
 
 public:
@@ -49,6 +57,25 @@ public:
     QVariantList appUsageList() const { return m_store.appUsageList(m_selectedDate); }
     QVariantList weeklyChartData() const { return m_store.weeklyChartData(m_selectedDate); }
     QVariantList categoryBreakdown() const { return m_store.categoryBreakdown(m_selectedDate); }
+    QVariantList allLimitsList() const { return m_store.allLimitsList(); }
+
+    bool downtimeEnabled() const { return m_store.downtimeEnabled(); }
+    void setDowntimeEnabled(bool enabled);
+    QString downtimeStart() const { return m_store.downtimeStart(); }
+    void setDowntimeStart(const QString &start);
+    QString downtimeEnd() const { return m_store.downtimeEnd(); }
+    void setDowntimeEnd(const QString &end);
+    bool downtimeBlockAtLimit() const { return m_store.downtimeBlockAtLimit(); }
+    void setDowntimeBlockAtLimit(bool block);
+    bool isDowntimeActive() const { return m_store.isDowntimeActive(); }
+
+    QStringList alwaysAllowedApps() const { return m_store.alwaysAllowedApps(); }
+    Q_INVOKABLE void addAlwaysAllowedApp(const QString &appId);
+    Q_INVOKABLE void removeAlwaysAllowedApp(const QString &appId);
+    Q_INVOKABLE bool isAlwaysAllowed(const QString &appId) const { return m_store.isAlwaysAllowed(appId); }
+
+    QString chartViewMode() const { return m_chartViewMode; }
+    Q_INVOKABLE void setChartViewMode(const QString &mode);
 
     Q_INVOKABLE void recordActiveApp(const QString &appClass, const QString &caption = QString());
     Q_INVOKABLE void addUsageSeconds(const QString &dateStr, const QString &appId, int seconds);
@@ -97,12 +124,14 @@ Q_SIGNALS:
     void windowVisibleChanged();
     void showWindowRequested();
     void appLimitExceeded(const QString &appId, int limitMinutes, int currentSeconds);
+    void chartViewModeChanged();
 
 private:
     QString m_storageDir;
     QString m_selectedDate;
     QString m_currentActiveApp;
     QString m_currentActiveCaption;
+    QString m_chartViewMode = QStringLiteral("weekly");
     bool m_windowVisible = true;
     int m_ticksSinceSave = 0;
 

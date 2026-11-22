@@ -25,61 +25,67 @@ ColumnLayout {
     Text {
         Layout.leftMargin: 8
         Layout.bottomMargin: 4
-        text: "Screen Time"
+        text: "Tiempo de uso"
         font.pixelSize: 11
         font.weight: Font.DemiBold
-        color: CachyTheme.textMuted
+        color: CachyPalette.textMuted
     }
 
     CachySidebarItem {
         Layout.fillWidth: true
-        text: "App & Website Activity"
-        iconName: "office-chart-bar"
-        iconColor: "#007AFF"
+        text: "Actividad de apps"
+        iconName: "chart-bar"
+        iconColor: "#0A84FF"
         squircleIconBadge: true
+        accentSelected: true
         selected: root.activeSection === "activity"
         onClicked: root.sectionSelected("activity")
     }
 
     CachySidebarItem {
         Layout.fillWidth: true
-        text: "Active Window (KWin)"
-        iconName: "window"
-        iconColor: "#34C759"
+        text: "Tiempo de inactividad"
+        iconName: "bed"
+        iconColor: "#5856D6"
         squircleIconBadge: true
-        selected: root.activeSection === "live"
-        onClicked: root.sectionSelected("live")
+        accentSelected: true
+        selected: root.activeSection === "downtime"
+        onClicked: root.sectionSelected("downtime")
     }
 
     CachySidebarItem {
         Layout.fillWidth: true
-        text: "Categories Breakdown"
-        iconName: "tag"
-        iconColor: "#AF52DE"
-        squircleIconBadge: true
-        selected: root.activeSection === "categories"
-        onClicked: root.sectionSelected("categories")
-    }
-
-    Text {
-        Layout.leftMargin: 8
-        Layout.topMargin: 10
-        Layout.bottomMargin: 4
-        text: "Limit Usage"
-        font.pixelSize: 11
-        font.weight: Font.DemiBold
-        color: CachyTheme.textMuted
-    }
-
-    CachySidebarItem {
-        Layout.fillWidth: true
-        text: "App Limits"
-        iconName: "chronometer"
+        text: "Límites de apps"
+        iconName: "hourglass"
         iconColor: "#FF9500"
         squircleIconBadge: true
-        badgeText: root.trackerObj ? String(root.trackerObj.appUsageList.length) : "0"
+        accentSelected: true
+        badgeText: (root.trackerObj && root.trackerObj.allLimitsList) ? String(root.trackerObj.allLimitsList.length) : "0"
         selected: root.activeSection === "limits"
         onClicked: root.sectionSelected("limits")
+    }
+
+    CachySidebarItem {
+        Layout.fillWidth: true
+        text: "Siempre permitido"
+        iconName: "shield-check"
+        iconColor: "#34C759"
+        squircleIconBadge: true
+        accentSelected: true
+        badgeText: (root.trackerObj && root.trackerObj.alwaysAllowedApps) ? String(root.trackerObj.alwaysAllowedApps.length) : "0"
+        selected: root.activeSection === "alwaysAllowed"
+        onClicked: root.sectionSelected("alwaysAllowed")
+    }
+
+    CachySidebarItem {
+        Layout.fillWidth: true
+        text: "Ventana activa (KWin)"
+        iconName: "apps"
+        iconColor: "#30B0C7"
+        squircleIconBadge: true
+        accentSelected: true
+        selected: root.activeSection === "live"
+        onClicked: root.sectionSelected("live")
     }
 
     Item { Layout.fillHeight: true }
@@ -89,9 +95,9 @@ ColumnLayout {
         Layout.fillWidth: true
         implicitHeight: liveSidebarCol.implicitHeight + 18
         radius: 12
-        color: CachyTheme.cardBackground
+        color: CachyPalette.cardBackground
         border.width: 1
-        border.color: CachyTheme.specularBorder
+        border.color: CachyPalette.specularBorder
 
         ColumnLayout {
             id: liveSidebarCol
@@ -109,7 +115,7 @@ ColumnLayout {
                     radius: 3.5
                     color: (root.trackerObj && root.trackerObj.currentActiveApp.length > 0)
                         ? "#34C759"
-                        : CachyTheme.textMuted
+                        : CachyPalette.textMuted
                 }
 
                 Text {
@@ -117,7 +123,7 @@ ColumnLayout {
                     text: "KWin Wayland Live"
                     font.pixelSize: 10
                     font.weight: Font.Bold
-                    color: CachyTheme.textMuted
+                    color: CachyPalette.textMuted
                     elide: Text.ElideRight
                 }
             }
@@ -127,7 +133,7 @@ ColumnLayout {
                 text: root.trackerObj ? root.trackerObj.currentActiveDisplayName : "Escritorio Wayland"
                 font.pixelSize: 12
                 font.weight: Font.DemiBold
-                color: CachyTheme.textPrimary
+                color: CachyPalette.text
                 elide: Text.ElideRight
             }
 

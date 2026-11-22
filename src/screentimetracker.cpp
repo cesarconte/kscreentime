@@ -175,3 +175,47 @@ void ScreenTimeTracker::ClearAllData()
 {
     clearAllData();
 }
+
+void ScreenTimeTracker::setDowntimeEnabled(bool enabled)
+{
+    m_store.setDowntimeEnabled(enabled);
+    m_store.saveToDisk(m_storageDir, storageFilePath());
+}
+
+void ScreenTimeTracker::setDowntimeStart(const QString &start)
+{
+    m_store.setDowntimeStart(start);
+    m_store.saveToDisk(m_storageDir, storageFilePath());
+}
+
+void ScreenTimeTracker::setDowntimeEnd(const QString &end)
+{
+    m_store.setDowntimeEnd(end);
+    m_store.saveToDisk(m_storageDir, storageFilePath());
+}
+
+void ScreenTimeTracker::setDowntimeBlockAtLimit(bool block)
+{
+    m_store.setDowntimeBlockAtLimit(block);
+    m_store.saveToDisk(m_storageDir, storageFilePath());
+}
+
+void ScreenTimeTracker::addAlwaysAllowedApp(const QString &appId)
+{
+    m_store.addAlwaysAllowedApp(appId);
+    m_store.saveToDisk(m_storageDir, storageFilePath());
+}
+
+void ScreenTimeTracker::removeAlwaysAllowedApp(const QString &appId)
+{
+    m_store.removeAlwaysAllowedApp(appId);
+    m_store.saveToDisk(m_storageDir, storageFilePath());
+}
+
+void ScreenTimeTracker::setChartViewMode(const QString &mode)
+{
+    if (m_chartViewMode != mode) {
+        m_chartViewMode = mode;
+        Q_EMIT chartViewModeChanged();
+    }
+}

@@ -9,8 +9,10 @@
 #include <QDate>
 #include <QDir>
 #include <QFile>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QTime>
 #include <QVariantMap>
 
 #include <algorithm>
@@ -61,6 +63,25 @@ void ScreenTimeStore::loadFromDisk(const QString &filePath)
             m_appLimits.insert(AppClassifier::normalizeAppId(limIt.key()), mins);
         }
     }
+
+    if (root.contains(QStringLiteral("downtime"))) {
+        const QJsonObject dt = root.value(QStringLiteral("downtime")).toObject();
+        m_downtimeEnabled = dt.value(QStringLiteral("enabled")).toBool(false);
+        m_downtimeStart = dt.value(QStringLiteral("start")).toString(QStringLiteral("22:00"));
+        m_downtimeEnd = dt.value(QStringLiteral("end")).toString(QStringLiteral("07:00"));
+        m_downtimeBlockAtLimit = dt.value(QStringLiteral("blockAtLimit")).toBool(true);
+    }
+
+    if (root.contains(QStringLiteral("alwaysAllowed"))) {
+        m_alwaysAllowedApps.clear();
+        const QJsonArray arr = root.value(QStringLiteral("alwaysAllowed")).toArray();
+        for (const QJsonValue &v : arr) {
+            const QString app = AppClassifier::normalizeAppId(v.toString());
+            if (!app.isEmpty() && !m_alwaysAllowedApps.contains(app)) {
+                m_alwaysAllowedApps.append(app);
+            }
+        }
+    }
 }
 
 void ScreenTimeStore::saveToDisk(const QString &storageDir, const QString &filePath) const
@@ -87,9 +108,22 @@ void ScreenTimeStore::saveToDisk(const QString &storageDir, const QString &fileP
         }
     }
 
+    QJsonObject downtimeObj;
+    downtimeObj.insert(QStringLiteral("enabled"), m_downtimeEnabled);
+    downtimeObj.insert(QStringLiteral("start"), m_downtimeStart);
+    downtimeObj.insert(QStringLiteral("end"), m_downtimeEnd);
+    downtimeObj.insert(QStringLiteral("blockAtLimit"), m_downtimeBlockAtLimit);
+
+    QJsonArray alwaysAllowedArr;
+    for (const QString &app : m_alwaysAllowedApps) {
+        alwaysAllowedArr.append(app);
+    }
+
     QJsonObject root;
     root.insert(QStringLiteral("days"), daysObj);
     root.insert(QStringLiteral("appLimits"), limitsObj);
+    root.insert(QStringLiteral("downtime"), downtimeObj);
+    root.insert(QStringLiteral("alwaysAllowed"), alwaysAllowedArr);
 
     QFile file(filePath);
     if (file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
@@ -371,4 +405,105 @@ QVariantList ScreenTimeStore::categoryBreakdown(const QString &selectedDate) con
         result.push_back(item);
     }
     return result;
+}
+
+QVariantList ScreenTimeStore::allLimitsList() const
+{
+    QVariantList list;
+    for (auto it = m_appLimits.cbegin(); it != m_appLimits.cend(); ++it) {
+        if (it.value() <= 0) {
+            continue;
+        }
+        QVariantMap map;
+        map.insert(QStringLiteral("appId"), it.key());
+        map.insert(QStringLiteral("displayName"), AppClassifier::displayNameForApp(it.key()));
+        map.insert(QStringLiteral("category"), AppClassifier::classifyAppCategory(it.key()));
+        map.insert(QStringLiteral("iconName"), AppClassifier::iconNameForApp(it.key()));
+        map.insert(QStringLiteral("limitMinutes"), it.value());
+        map.insert(QStringLiteral("formattedLimit"), AppClassifier::formatDuration(it.value() * 60));
+        list.append(map);
+    }
+    return list;
+}
+
+void ScreenTimeStore::setDowntimeEnabled(bool enabled)
+{
+    if (m_downtimeEnabled != enabled) {
+        m_downtimeEnabled = enabled;
+        Q_EMIT dataChanged();
+    }
+}
+
+void ScreenTimeStore::setDowntimeStart(const QString &start)
+{
+    if (m_downtimeStart != start) {
+        m_downtimeStart = start;
+        Q_EMIT dataChanged();
+    }
+}
+
+void ScreenTimeStore::setDowntimeEnd(const QString &end)
+{
+    if (m_downtimeEnd != end) {
+        m_downtimeEnd = end;
+        Q_EMIT dataChanged();
+    }
+}
+
+void ScreenTimeStore::setDowntimeBlockAtLimit(bool block)
+{
+    if (m_downtimeBlockAtLimit != block) {
+        m_downtimeBlockAtLimit = block;
+        Q_EMIT dataChanged();
+    }
+}
+
+bool ScreenTimeStore::isDowntimeActive() const
+{
+    if (!m_downtimeEnabled) {
+        return false;
+    }
+    const QTime now = QTime::currentTime();
+    const QTime start = QTime::fromString(m_downtimeStart, QStringLiteral("hh:mm"));
+    const QTime end = QTime::fromString(m_downtimeEnd, QStringLiteral("hh:mm"));
+    if (!start.isValid() || !end.isValid()) {
+        return false;
+    }
+    if (start <= end) {
+        return now >= start && now <= end;
+    } else {
+        // Crosses midnight (e.g. 22:00 to 07:00)
+        return now >= start || now <= end;
+    }
+}
+
+void ScreenTimeStore::setAlwaysAllowedApps(const QStringList &apps)
+{
+    if (m_alwaysAllowedApps != apps) {
+        m_alwaysAllowedApps = apps;
+        Q_EMIT dataChanged();
+    }
+}
+
+void ScreenTimeStore::addAlwaysAllowedApp(const QString &appId)
+{
+    const QString norm = AppClassifier::normalizeAppId(appId);
+    if (!norm.isEmpty() && !m_alwaysAllowedApps.contains(norm)) {
+        m_alwaysAllowedApps.append(norm);
+        Q_EMIT dataChanged();
+    }
+}
+
+void ScreenTimeStore::removeAlwaysAllowedApp(const QString &appId)
+{
+    const QString norm = AppClassifier::normalizeAppId(appId);
+    if (m_alwaysAllowedApps.removeOne(norm)) {
+        Q_EMIT dataChanged();
+    }
+}
+
+bool ScreenTimeStore::isAlwaysAllowed(const QString &appId) const
+{
+    const QString norm = AppClassifier::normalizeAppId(appId);
+    return m_alwaysAllowedApps.contains(norm);
 }

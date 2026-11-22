@@ -65,7 +65,6 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     engine.addImportPath(QStringLiteral("/usr/lib/qt6/qml"));
-    engine.addImportPath(QStringLiteral("/home/cesar/.local/lib/qt6/qml"));
     engine.rootContext()->setContextProperty(QStringLiteral("Tracker"), &tracker);
     engine.load(QUrl(QStringLiteral("qrc:/org/cesar/kscreentime/qml/main.qml")));
 
